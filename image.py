@@ -3,11 +3,11 @@ import numpy as np
 
  # An image wrapper class for OpenCV and numpy arrays
 class Image:
-   
+
     # image : np.ndarray()
     # np.ndarray([[],[]])):
     def __init__(self, image = np.array([[],[]], np.int32)):
-        self.image = image 
+        self.image = image
 
     # Saves the image at the specified path, if path is an empty string or
     # None, don't save the image to disk
@@ -15,14 +15,15 @@ class Image:
         if path == '' or path == None:
             return
         cv.imwrite(path, self.image)
-        
+
     # Loads the image at the specified path into the image property, if
     # path is an empty string or None, don't modify the image currently
     # stored
-    def load(self, path):
+    def load(self, path, isColor = True):
         if path == '' or path == None:
             return
-        self.image = cv.imread(path, cv.IMREAD_COLOR)
+        flag = cv.IMREAD_COLOR if isColor else cv.IMREAD_GRAYSCALE
+        self.image = cv.imread(path, flag)
 
     # Gets the specified pixel in the image, tuple (b, g, r), returns
     # None if an invalid pixel is specified
@@ -41,16 +42,23 @@ class Image:
             return
         self.image[x, y] = v
 
+    # Gets the grayscale image for this image
+    def getGrayScale(self):
+        return Image(cv.cvtColor(self.image, cv.COLOR_BGR2GRAY))
+
     # Returns a tuple containing the resolution of the image (width, height)
     def getResolution(self):
         return (self.image.shape[0], self.image.shape[1])
 
     # Compute and return the derivative of the image
     def derivative(self):
-        pass
+        return Image(np.absolute(cv.Sobel(self.image, cv.CV_64F, 1, 0)) + np.absolute(cv.Sobel(self.image, cv.CV_64F, 0, 1)))
 
     # Compute and return a gaussian blur for the image
-    def gaussian(self):
-        pass
+    def gaussian(self, ksize = None, sigma = None):
+        if(sigma == None):
+            sigma = 2
+        if(ksize == None):
+            ksize = (4*sigma+1,4*sigma+1)
+        return Image(cv.GaussianBlur(self.image, ksize, sigma))
 
-        
