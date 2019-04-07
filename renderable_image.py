@@ -23,7 +23,7 @@ class RenderableImage:
     # img : Image
     def setSource(self, img):
         self.source = img
-        
+
     # Returns the source image for this RenderableImage
     def getSource(self):
         return self.source
