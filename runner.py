@@ -43,7 +43,7 @@ def paint(source, canvas, brushes, firstFrame):
                 areaError = np.sum(euclid)
                 if(refresh or areaError > T):
                     max_pos = np.argmax(euclid, axis=1)
-                    #paintStroke(max_pos[0], max_pos[1], canvas, b, i_ri)
+                    #paintStroke(max_pos[0][0], max_pos[0][1], canvas, b, i_ri)
         refresh = False
 
 if(__name__ == "__main__"):
