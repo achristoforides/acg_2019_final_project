@@ -38,7 +38,7 @@ class Image:
     # then nothing will happen
     def setPixel(self, x, y, v):
         resolution_x, resolution_y = self.getResolution()
-        if x < 0 or y < 0 or x > resolution_x or y > resolution_y:
+        if x < 0 or y < 0 or x >= resolution_x or y >= resolution_y:
             return
         self.image[x, y] = v
 
@@ -46,13 +46,21 @@ class Image:
     def getGrayScale(self):
         return Image(cv.cvtColor(self.image, cv.COLOR_BGR2GRAY))
 
+    def getLuminance(self):
+        lumi = cv.cvtColor(self.image, cv.COLOR_BGR2YCrCb)
+        result,_,_ = cv.split(lumi)
+        r = cv.normalize(result, None, alpha=0, beta=1, norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
+        return Image(r)
+
     # Returns a tuple containing the resolution of the image (width, height)
     def getResolution(self):
         return (self.image.shape[0], self.image.shape[1])
 
     # Compute and return the derivative of the image
-    def derivative(self):
-        return Image(np.absolute(cv.Sobel(self.image, cv.CV_64F, 1, 0)) + np.absolute(cv.Sobel(self.image, cv.CV_64F, 0, 1)))
+    def derivative(self, isX):
+        if(isX):
+            return Image(np.absolute(cv.Sobel(self.image, cv.CV_64F, 1, 0)))
+        return Image(np.absolute(cv.Sobel(self.image, cv.CV_64F, 0, 1)))
 
     # Compute and return a gaussian blur for the image
     def gaussian(self, ksize = None, sigma = None):
