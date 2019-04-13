@@ -26,21 +26,25 @@ class Image:
         self.image = cv.imread(path, flag)
 
     # Gets the specified pixel in the image, tuple (b, g, r), returns
-    # None if an invalid pixel is specified
+    # None if an invalid pixel is specified. The x and y parameter work as
+    # in standard mathematics; x is position on the horizontal axis, and y
+    # is position on the vertical axis
     def getPixel(self, x, y):
         resolution_x, resolution_y = self.getResolution()
         if x < 0 or y < 0 or x >= resolution_x or y >= resolution_y:
             return None
-        return self.image[x, y]
+        return self.image[y, x]
 
     # Sets the value of the specified pixel in the image, takes in a
     # tuple in the form (b, g, r), if the specified pixel is invalid,
-    # then nothing will happen
+    # then nothing will happen. The x and y parameter work as in standard
+    # mathematics; x is position on the horizontal axis, and y is position
+    # on the vertical axis
     def setPixel(self, x, y, v):
         resolution_x, resolution_y = self.getResolution()
         if x < 0 or y < 0 or x >= resolution_x or y >= resolution_y:
             return
-        self.image[x, y] = v
+        self.image[y, x] = v
 
     # Gets the grayscale image for this image
     def getGrayScale(self):

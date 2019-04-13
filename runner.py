@@ -5,6 +5,68 @@ import brush_stroke as bs
 
 f_sigma = 0
 T = 0
+maxStrokeLength = 10
+minStrokeLength = 2
+f_c = 1
+
+# PaintStroke routine
+#
+# x0:              int, starting x point
+# y0:              int, starting y point
+# brush_i:         float, brush radius
+# ref_image:       Image, reference image
+# painting_so_far: Image, current render of image
+def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
+    color = ref_image.getPixel(x0, y0)
+    K = bs.BrushStroke(brush_i, color)
+    K.addPoint(x0, y0)
+
+    for i in range(1, maxStrokeLength):
+        temp_img = ref_image.getLuminance()
+        xderiv = temp_img.derivative(True)
+        yderiv = temp_img.derivative(False)
+
+        # i'm not sure what the derivative(x_i-1, y_i-1) means...
+        gx, gy = (255 * xderiv.getPixel(x0 + i - 1, y0 + i - 1), \
+                  255 * yderiv.getPixel(x0 + i - 1, y0 + i - 1))
+
+        gxm1, gym1 = (255 * xderiv.getPixel(x0 + i - 2, y0 + i - 2), \
+                      255 * yderiv.getPixel(x0 + i - 2, y0 + i - 2))
+        delxim1, delyim1 = (-gym1, gxm1)
+
+        if brush_i * sqrt(gx*gx + gy*gy) >= 1:
+            # rotate gradient by 90 degrees
+            delxi, delyi = (-gy, gx)
+
+            # reverse direction if necessary
+            #  we need to access the delxi-1 and delyi-1?!?!?!
+            if i > 1 and delxim1 * delxi + delyim1 * delyi < 0:
+                delxi, delyi = (-delxi, -delyi)
+
+            # filter stroke direction
+            delxi, delyi = (f_c * delxi + (1 - f_c) * delxim1, \
+                            f_c * delyi + (1 - f_c) * delyim1)
+
+        else:
+            if i > 1:
+                delxi, delyi = (delxim1, delyim1)
+            else:
+                return K
+
+        xi, yi = ((x0 + i - 1) + brush_i * (delxi) / sqrt(delxi*delxi + delyi*delyi), \
+                  (y0 + i - 1) + brush_i * (delyi) / sqrt(delxi*delxi + delyi*delyi))
+
+        color_sub = ref_image.getPixel(xi, yi) - ref_image.getPixel(xi, yi)
+        img_euc = sqrt(color_sub[0]*color_sub[0] + color_sub[1]*color_sub[1] + color_sub[2]*color_sub[2])
+        ref_color_sub = ref_image.getPixel(xi, yi) - color
+        ref_color_euc = sqrt(ref_color_sub[0]*ref_color_sub[0] + ref_color_sub[1]*ref_color_sub[1] + \
+                             ref_color_sub[2]*ref_color_sub[2])
+        if i > minStrokeLength and img_euc < ref_color_euc:
+            return K
+        K.addPoint(xi, yi)
+
+    return K
+                
 
 def getRange(img, rBounds, cBounds):
     return img[rBounds[0]:rBounds[1], cBounds[0]:cBounds[1]]
@@ -47,7 +109,15 @@ def paint(source, canvas, brushes, firstFrame):
         refresh = False
 
 if(__name__ == "__main__"):
+    #Pixel set test
+    img = im.Image()
+    img.load('images/van_gogh.jpg')
 
+    img.setPixel(0, 0, (255, 0, 0))
+    img.setPixel(1, 0, (0, 255, 0))
+    img.setPixel(0, 1, (0, 0, 255))
+    img.save('images_output/van_gogh.png')
+    
     #Load image
     img = im.Image()
     img.load('images/whistler.png')
@@ -74,3 +144,6 @@ if(__name__ == "__main__"):
     l_img.save('images_output/whistle_2.png')
 
     print(l_img.image)
+
+    print(d_x.image)
+    print(d_y.image)
