@@ -12,6 +12,8 @@ class BrushStroke:
         self.radius = radius
         self.color = color
         self.points = []
+        self.dirs = []
+        self.pointStrokeRadii = []
 
     # Returns the current radius of the BrushStroke
     def getRadius(self):
@@ -37,3 +39,19 @@ class BrushStroke:
     # Adds the specified (x, y) point to the points list
     def addPoint(self, x, y):
         self.points.append((x, y))
+
+    def addDir(self, x, y):
+        self.dirs.append((x, y))
+
+    def addPointRadii(self, radii):
+        self.pointStrokeRadii.append(radii)
+
+    # Returns the last control point
+    def getLastControlPoint(self):
+        return self.points[-1]
+
+    def getLastDirection(self):
+        return self.dirs[-1]
+
+    def getPointRadii(self, index):
+        return self.pointStrokeRadii[index]
