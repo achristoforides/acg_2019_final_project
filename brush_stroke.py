@@ -100,6 +100,6 @@ class BrushStroke:
         for i in range(len(self.points)-1):
             diff = int(abs(self.points[i][0]-self.points[i+1][0])/interval)
             for t in range(diff):
-                print(t)
+                #print(t)
                 result.append((1-t/diff)*self.pointStrokeRadii[i] + t/diff*self.pointStrokeRadii[i+1])
         return result
