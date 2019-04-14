@@ -1,12 +1,16 @@
+import cv2 as cv
+import math
+import random
 import image as im
 import numpy as np
 import renderable_image as ri
 import brush_stroke as bs
 
-f_sigma = 0
-T = 0
-maxStrokeLength = 10
-minStrokeLength = 2
+f_sigma = 0.5
+bss = [ 8, 4, 2]
+T = 100
+maxStrokeLength = 16
+minStrokeLength = 4
 f_c = 1
 
 # PaintStroke routine
@@ -32,8 +36,12 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
         lcpx, lcpy = K.getLastControlPoint()
         gx, gy = (255 * xderiv.getPixel(lcpx, lcpy), 255 * yderiv.getPixel(lcpx, lcpy))
 
+        if(not gx or not gy):
+            continue
+
         ldx, ldy = K.getLastDirection()
-        if brush_i * sqrt(gx*gx + gy*gy) >= 1:
+        #print(brush_i, gx, gy)
+        if brush_i * math.sqrt(gx*gx + gy*gy) >= 1:
             # rotate gradient by 90 degrees
             delxi, delyi = (-gy, gx)
 
@@ -49,30 +57,41 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
             else:
                 return K
 
-        xi, yi = (lcpx + brush_i * (delxi) / sqrt(delxi*delxi + delyi*delyi), \
-                  lcpy + brush_i * (delyi) / sqrt(delxi*delxi + delyi*delyi))
+        if(delxi**2 == 0 or delyi**2 == 0):
+            continue
+
+        xi, yi = (math.ceil(lcpx + brush_i * (delxi) / math.sqrt(delxi*delxi + delyi*delyi)), \
+                  math.ceil(lcpy + brush_i * (delyi) / math.sqrt(delxi*delxi + delyi*delyi)))
 
         pir = ref_image.getPixel(xi, yi)
         pid = painting_so_far.getPixel(xi, yi)
 
-        pix_euc = sqrt( pow(pir[0]-pid[0], 2) + \
+        if(len(pir) != 3 or len(pid) != 3):
+            continue
+
+        pix_euc = math.sqrt( pow(pir[0]-pid[0], 2) + \
                         pow(pir[1]-pid[1], 2) + \
                         pow(pir[2]-pid[2], 2) )
-        color_euc = sqrt( pow(pir[0]-color[0], 2) + \
+        color_euc = math.sqrt( pow(pir[0]-color[0], 2) + \
                           pow(pir[1]-color[1], 2) + \
                           pow(pir[2]-color[2], 2) )
 
         if i > minStrokeLength and pix_euc < color_euc:
             return K
 
-        K.addPointRadii(brush_i * sqrt(gx*gx + gy*gy))
-        K.addPoint(xi, yi)
+        hit = False
+        for i in K.points:
+            if(i[0] == xi):
+                hit = True
+        if(not hit):
+            K.addPointRadii(brush_i)
+            K.addPoint(xi, yi)
 
     return K
-                
+
 
 def getRange(img, rBounds, cBounds):
-    return img[rBounds[0]:rBounds[1], cBounds[0]:cBounds[1]]
+    return img.image[rBounds[0]:rBounds[1], cBounds[0]:cBounds[1]]
 
 def calculateError(img1, img2, rBounds, cBounds):
     #Get kernel
@@ -93,16 +112,16 @@ def calculateError(img1, img2, rBounds, cBounds):
 # firstFrame: for video stuff
 def paint(source, canvas, brushes, firstFrame):
     strokes = []
-    
+
     refresh = firstFrame
     brushes.sort(reverse = True)
     for b in brushes:
-        i_ri = source.getGaussian(kernel=f_sigma*b)
+        i_ri = source.gaussian(sigma=f_sigma, ksize=(int(f_sigma*b)-1, int(f_sigma*b)-1))
         grid = b
 
         width, height = source.getResolution()
-        space_calc_x = width / grid
-        space_calc_y = height / grid
+        space_calc_x = width // grid
+        space_calc_y = height // grid
 
         ### loop through gridspace
         for row in range(space_calc_y):
@@ -111,54 +130,71 @@ def paint(source, canvas, brushes, firstFrame):
                 start_c = col * grid + grid
                 #Scan through the pixels in this range...
                 # This represents M...
-                rRange, cRange = (start_r-grid/2, start_r+grid/2), \
-                                 (start_c-grid/2, start_c+grid/2)
+                rRange, cRange = (start_r-grid//2, start_r+grid//2), \
+                                 (start_c-grid//2, start_c+grid//2)
                 M = (cRange, rRange)
-                euclid = calculateError(canvas, i_ri, M[1], M[0])
+                try:
+                    euclid = calculateError(canvas, i_ri, M[1], M[0])
+                except:
+                    continue
+                    #print(euclid)
                 areaError = np.sum(euclid)
                 if(refresh or areaError > T):
-                    max_pos = np.argmax(euclid, axis=1)
-                    strokes.append(paintStroke(max_pos[0][0], max_pos[0][1], b, i_ri, canvas))
+                    max_ys = np.argmax(euclid, axis=1)
+                    temp_xs = np.arange(len(max_ys))
+                    val = np.argmax(euclid[temp_xs, max_ys])
+                    x_i = temp_xs[val] + start_c-grid//2
+                    y_i = max_ys[val] + start_r-grid//2
+                    #print(x_i, y_i)
+                    strokes.append(paintStroke(x_i, y_i, b, i_ri, canvas))
         refresh = False
+
+        print('brush done..')
+    #print(strokes)
 
     # and now render the brushes :)
 
-if(__name__ == "__main__"):
-    #Pixel set test
-    img = im.Image()
-    img.load('images/van_gogh.jpg')
+    while(len(strokes) > 0):
+        pos = random.randint(0, len(strokes)-1)
+        b = strokes.pop(pos)
+        if(len(b.points) >= 2):
+            renderStroke(b, canvas)
+            
+            canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
 
-    img.setPixel(0, 0, (255, 0, 0))
-    img.setPixel(1, 0, (0, 255, 0))
-    img.setPixel(0, 1, (0, 0, 255))
-    img.save('images_output/van_gogh.png')
-    
+def renderStroke(b, canvas):
+
+    print('render')
+
+    xs, cs, minRadius = b.calculateCubic()
+    interp = b.getInterpolatedArray(minRadius)
+
+    ys = cs(xs)
+
+    res_h, res_w = canvas.getResolution()
+
+    #print(xs, ys, interp, minRadius)
+
+    for x,y in zip(xs.astype(int), ys.astype(int)):
+        x_r = math.ceil(x)
+        r = 1
+        y_r = math.ceil(y)
+        if(x_r-r < 0 or x_r+r > res_w or y_r-r < 0 or y_r + r > res_h):
+            #print('boooo')
+            continue
+        #print('yes')
+        canvas.image[y_r-r:y_r+r, x_r-r:x_r+r] = b.getColor()
+
+if(__name__ == "__main__"):
     #Load image
     img = im.Image()
-    img.load('images/whistler.png')
+    img.load('images/left_w.png')
 
-    g = img.gaussian()
+    canvas = im.Image()
+    canvas.load('images/left_w.png')
+    canvas.image.fill(0)
 
-    #Convert to grayscale before derivative
-    g_img = img.getGrayScale()
+    paint(img, canvas, bss, False)
 
-    l_img = img.getLuminance()
+    canvas.save('images_output/final5.png')
 
-    d_x = g_img.derivative(True)
-    d_y = g_img.derivative(False)
-
-    g.save('images_output/whistle_gaussian.png')
-
-    #d_x.image = np.multiply(d_x.image, 255.0).astype(np.float)
-    #d_y.image = np.multiply(d_y.image, 255.0).astype(np.float)
-    #print(d_x.image)
-
-    d_x.save('images_output/whistle_derivative_x.png')
-    d_y.save('images_output/whistle_derivative_y.png')
-
-    l_img.save('images_output/whistle_2.png')
-
-    print(l_img.image)
-
-    print(d_x.image)
-    print(d_y.image)
