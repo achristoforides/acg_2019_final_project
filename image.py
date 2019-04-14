@@ -6,7 +6,7 @@ class Image:
 
     # image : np.ndarray()
     # np.ndarray([[],[]])):
-    def __init__(self, image = np.array([[],[]], np.int32)):
+    def __init__(self, image = np.array([[],[]], np.int64)):
         self.image = image
 
     # Saves the image at the specified path, if path is an empty string or
@@ -30,10 +30,10 @@ class Image:
     # in standard mathematics; x is position on the horizontal axis, and y
     # is position on the vertical axis
     def getPixel(self, x, y):
-        resolution_x, resolution_y = self.getResolution()
+        resolution_y, resolution_x = self.getResolution()
         if x < 0 or y < 0 or x >= resolution_x or y >= resolution_y:
-            return None
-        return self.image[y, x]
+            return np.array([])
+        return self.image[y, x].astype(np.float64)
 
     # Sets the value of the specified pixel in the image, takes in a
     # tuple in the form (b, g, r), if the specified pixel is invalid,

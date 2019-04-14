@@ -1,3 +1,7 @@
+import math
+import numpy as np
+from scipy.interpolate import CubicSpline
+
 # A wrapper class to hold all data which comprises a brush stroke
 #
 # radius: the radius of the brush
@@ -14,6 +18,8 @@ class BrushStroke:
         self.points = []
         self.dirs = []
         self.pointStrokeRadii = []
+        self.spline = None
+        self.npr = None
 
     # Returns the current radius of the BrushStroke
     def getRadius(self):
@@ -55,3 +61,45 @@ class BrushStroke:
 
     def getPointRadii(self, index):
         return self.pointStrokeRadii[index]
+
+    def calculateCubic(self):
+        start_x = self.points[0][0]
+        start_y = self.points[0][1]
+
+        end_x = self.points[-1][0]
+        end_y = self.points[-1][1]
+
+        #nprint("START END " , start_x, end_x)
+        self.npr = np.arange(start_x, end_x, self.pointStrokeRadii[0])
+
+        xs = []
+        ys = []
+
+        #print(self.points)
+
+        for i in self.points:
+            xs.append(i[0])
+            ys.append(i[1])
+
+        if(xs[0] > xs[-1]):
+            self.pointStrokeRadii.reverse()
+            self.npr = np.arange(end_x, start_x, 1)
+            xs.reverse()
+            ys.reverse()
+            self.points.reverse()
+        xs = np.array(xs)
+        ys = np.array(ys)
+        #print(xs, ys)
+        #print(self.npr)
+        self.spline = CubicSpline(xs, ys)
+        #print(self.pointStrokeRadii)
+        return (self.npr, self.spline, 1)
+
+    def getInterpolatedArray(self, interval):
+        result = []
+        for i in range(len(self.points)-1):
+            diff = int(abs(self.points[i][0]-self.points[i+1][0])/interval)
+            for t in range(diff):
+                print(t)
+                result.append((1-t/diff)*self.pointStrokeRadii[i] + t/diff*self.pointStrokeRadii[i+1])
+        return result
