@@ -119,7 +119,7 @@ def paint(source, canvas, brushes, firstFrame):
         i_ri = source.gaussian(sigma=f_sigma, ksize=(int(f_sigma*b)-1, int(f_sigma*b)-1))
         grid = b
 
-        width, height = source.getResolution()
+        height, width = source.getResolution()
         space_calc_x = width // grid
         space_calc_y = height // grid
 
@@ -160,7 +160,7 @@ def paint(source, canvas, brushes, firstFrame):
         if(len(b.points) >= 2):
             renderStroke(b, canvas)
             
-            canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
+            #canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
 
 def renderStroke(b, canvas):
 
@@ -188,13 +188,13 @@ def renderStroke(b, canvas):
 if(__name__ == "__main__"):
     #Load image
     img = im.Image()
-    img.load('images/left_w.png')
+    img.load('images/ig.png')
 
     canvas = im.Image()
-    canvas.load('images/left_w.png')
+    canvas.load('images/ig.png')
     canvas.image.fill(0)
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/final5.png')
+    canvas.save('images_output/f9.png')
 
