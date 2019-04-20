@@ -27,7 +27,7 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
     K.addDir(0, 0)
     K.addPointRadii(brush_i)
 
-    for i in range(1, maxStrokeLength):
+    for i in range(1, maxStrokeLength+1):
         temp_img = ref_image.getLuminance()
         xderiv = temp_img.derivative(True)
         yderiv = temp_img.derivative(False)
@@ -35,9 +35,6 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
         # i'm not sure what the derivative(x_i-1, y_i-1) means...
         lcpx, lcpy = K.getLastControlPoint()
         gx, gy = (255 * xderiv.getPixel(lcpx, lcpy), 255 * yderiv.getPixel(lcpx, lcpy))
-
-        if(not gx or not gy):
-            continue
 
         ldx, ldy = K.getLastDirection()
         #print(brush_i, gx, gy)
@@ -55,10 +52,7 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
             if i > 1:
                 delxi, delyi = (ldx, ldy)
             else:
-                return K
-
-        if(delxi**2 == 0 or delyi**2 == 0):
-            continue
+                return K        
 
         xi, yi = (math.ceil(lcpx + brush_i * (delxi) / math.sqrt(delxi*delxi + delyi*delyi)), \
                   math.ceil(lcpy + brush_i * (delyi) / math.sqrt(delxi*delxi + delyi*delyi)))
@@ -86,6 +80,7 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
         if(not hit):
             K.addPointRadii(brush_i)
             K.addPoint(xi, yi)
+            K.addDir(delxi, delyi)
 
     return K
 
@@ -96,6 +91,7 @@ def getRange(img, rBounds, cBounds):
 def calculateError(img1, img2, rBounds, cBounds):
     #Get kernel
     img1_block = getRange(img1, rBounds, cBounds)
+    #print(rBounds, cBounds)
     img2_block = getRange(img2, rBounds, cBounds)
 
     #Get RGB values for euclidean distance
@@ -120,47 +116,43 @@ def paint(source, canvas, brushes, firstFrame):
         grid = b
 
         height, width = source.getResolution()
-        space_calc_x = width // grid
-        space_calc_y = height // grid
 
         ### loop through gridspace
-        for row in range(space_calc_y):
-            start_r = row * grid + grid
-            for col in range(space_calc_x):
-                start_c = col * grid + grid
+        for row in range(grid//2, height, grid):
+            for col in range(grid//2, width, grid):
                 #Scan through the pixels in this range...
                 # This represents M...
-                rRange, cRange = (start_r-grid//2, start_r+grid//2), \
-                                 (start_c-grid//2, start_c+grid//2)
+                rRange, cRange = (row-grid//2, row+grid//2), \
+                                 (col-grid//2, col+grid//2)
                 M = (cRange, rRange)
-                try:
-                    euclid = calculateError(canvas, i_ri, M[1], M[0])
-                except:
-                    continue
+                
+                euclid = calculateError(canvas, i_ri, M[1], M[0])
                     #print(euclid)
                 areaError = np.sum(euclid)
                 if(refresh or areaError > T):
-                    max_ys = np.argmax(euclid, axis=1)
-                    temp_xs = np.arange(len(max_ys))
-                    val = np.argmax(euclid[temp_xs, max_ys])
-                    x_i = temp_xs[val] + start_c-grid//2
-                    y_i = max_ys[val] + start_r-grid//2
+                    max_xs = np.argmax(euclid, axis=1)
+
+                    temp_ys = np.arange(len(max_xs))
+                    val = np.argmax(euclid[temp_ys, max_xs])
+                    x_i = max_xs[val] + col-grid//2
+                    y_i = temp_ys[val] + row-grid//2
                     #print(x_i, y_i)
                     strokes.append(paintStroke(x_i, y_i, b, i_ri, canvas))
         refresh = False
 
         print('brush done..')
+        while(len(strokes) > 0):
+            pos = random.randint(0, len(strokes)-1)
+            b = strokes.pop(pos)
+            if(len(b.points) >= 2):
+                renderStroke(b, canvas)
     #print(strokes)
 
     # and now render the brushes :)
 
-    while(len(strokes) > 0):
-        pos = random.randint(0, len(strokes)-1)
-        b = strokes.pop(pos)
-        if(len(b.points) >= 2):
-            renderStroke(b, canvas)
-            
-            #canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
+    #strokes.sort(reverse=True, key=lambda x: x.getRadius())
+
+    #canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
 
 def renderStroke(b, canvas):
 
@@ -175,9 +167,8 @@ def renderStroke(b, canvas):
 
     #print(xs, ys, interp, minRadius)
 
-    for x,y in zip(xs.astype(int), ys.astype(int)):
+    for r,x,y in zip(np.array(b.pointStrokeRadii).astype(int), xs.astype(int), ys.astype(int)):
         x_r = math.ceil(x)
-        r = 1
         y_r = math.ceil(y)
         if(x_r-r < 0 or x_r+r > res_w or y_r-r < 0 or y_r + r > res_h):
             #print('boooo')
@@ -188,13 +179,13 @@ def renderStroke(b, canvas):
 if(__name__ == "__main__"):
     #Load image
     img = im.Image()
-    img.load('images/ig.png')
+    img.load('images/t2.png')
 
     canvas = im.Image()
-    canvas.load('images/ig.png')
-    canvas.image.fill(0)
+    canvas.load('images/t2.png')
+    canvas.image.fill(255)
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/f9.png')
+    canvas.save('images_output/79.png')
 
