@@ -91,7 +91,6 @@ def getRange(img, rBounds, cBounds):
 def calculateError(img1, img2, rBounds, cBounds):
     #Get kernel
     img1_block = getRange(img1, rBounds, cBounds)
-    #print(rBounds, cBounds)
     img2_block = getRange(img2, rBounds, cBounds)
 
     #Get RGB values for euclidean distance
@@ -99,6 +98,67 @@ def calculateError(img1, img2, rBounds, cBounds):
     b2,g2,r2 = cv.split(img2_block)
     result = np.sqrt(np.power(r1-r2, 2) + np.power(g1-g2, 2) + np.power(b1-b2, 2))
     return result
+
+def paintStrokeTwo(x0, y0, R, rImage, canvas):
+    color = rImage.getPixel(x0, y0)
+    K = bs.BrushStroke(R, color)
+    K.addPoint(x0, y0)
+    K.addDir(0,0)
+    K.addPointRadii(R)
+    lastDx, lastDy = 0, 0
+    x, y = x0, y0
+    height, width = rImage.getResolution()
+    for i in range(1, maxStrokeLength+1):
+
+        pir = rImage.getPixel(x, y)
+        pid = canvas.getPixel(x, y)
+
+        pix_euc = math.sqrt( pow(pir[0]-pid[0], 2) + \
+                        pow(pir[1]-pid[1], 2) + \
+                        pow(pir[2]-pid[2], 2) )
+        color_euc = math.sqrt( pow(pir[0]-color[0], 2) + \
+                          pow(pir[1]-color[1], 2) + \
+                          pow(pir[2]-color[2], 2) )
+
+        if(i > minStrokeLength and pix_euc < color_euc):
+            return K
+
+        temp_img = rImage.getLuminance()
+        xderiv = temp_img.derivative(True)
+        yderiv = temp_img.derivative(False)
+
+        gx, gy = xderiv.getPixel(x, y), yderiv.getPixel(x, y)
+
+        if(gx**2 + gy**2 == 0):
+            return K
+
+        dx, dy = -gy, gx
+
+        if(lastDx * dx + lastDy * dy < 0):
+            dx, dy = -dx, -dy
+
+        dx, dy = f_c * dx + (1-f_c)*lastDx, f_c * dy + (1-f_c)*lastDy 
+        dx, dy = dx / math.sqrt(dx**2 + dy**2), dy / math.sqrt(dx**2 + dy**2)
+
+        x, y = x+R*dx , y+R*dy
+
+        x, y = int(round(x)), int(round(y))
+
+        lastDx, lastDy = dx, dy
+
+        if(x < 0 or y < 0 or x >= width or y >= height):
+            return K
+
+        hit = False
+        for i in K.points:
+            if(i[0] == x):
+                hit = True
+        if(not hit):
+            K.addPoint(x, y)
+            K.addDir(dx, dy)
+            K.addPointRadii(math.sqrt(gx**2 + gy**2)*R)
+
+    return K 
 
 # Paint routine
 #
@@ -118,24 +178,27 @@ def paint(source, canvas, brushes, firstFrame):
         height, width = source.getResolution()
 
         ### loop through gridspace
-        for row in range(grid//2, height, grid):
-            for col in range(grid//2, width, grid):
+        for row in range(grid, height, grid):
+            for col in range(grid, width, grid):
                 #Scan through the pixels in this range...
                 # This represents M...
-                rRange, cRange = (row-grid//2, row+grid//2), \
-                                 (col-grid//2, col+grid//2)
+                rRange, cRange = (row-grid, row+grid), \
+                                 (col-grid, col+grid)
                 M = (cRange, rRange)
                 
                 euclid = calculateError(canvas, i_ri, M[1], M[0])
-                    #print(euclid)
                 areaError = np.sum(euclid)
+                
                 if(refresh or areaError > T):
                     max_xs = np.argmax(euclid, axis=1)
 
                     temp_ys = np.arange(len(max_xs))
                     val = np.argmax(euclid[temp_ys, max_xs])
-                    x_i = max_xs[val] + col-grid//2
-                    y_i = temp_ys[val] + row-grid//2
+                    #print(euclid)
+                    #print(max_xs)
+                    #print(temp_ys)
+                    x_i = max_xs[val] + col-grid
+                    y_i = temp_ys[val] + row-grid
                     #print(x_i, y_i)
                     strokes.append(paintStroke(x_i, y_i, b, i_ri, canvas))
         refresh = False
@@ -158,18 +221,20 @@ def renderStroke(b, canvas):
 
     print('render')
 
-    xs, cs, minRadius = b.calculateCubic()
-    interp = b.getInterpolatedArray(minRadius)
+    #xs, cs, minRadius = b.calculateCubic()
+    #interp = b.getInterpolatedArray(minRadius)
 
-    ys = cs(xs)
+    #ys = cs(xs)
+
+    ps = b.points
 
     res_h, res_w = canvas.getResolution()
 
     #print(xs, ys, interp, minRadius)
 
-    for r,x,y in zip(np.array(b.pointStrokeRadii).astype(int), xs.astype(int), ys.astype(int)):
-        x_r = math.ceil(x)
-        y_r = math.ceil(y)
+    for r,p in zip(np.array(b.pointStrokeRadii).astype(int), ps):
+        x_r = math.ceil(p[0])
+        y_r = math.ceil(p[1])
         if(x_r-r < 0 or x_r+r > res_w or y_r-r < 0 or y_r + r > res_h):
             #print('boooo')
             continue
