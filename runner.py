@@ -207,8 +207,10 @@ def paint(source, canvas, brushes, firstFrame):
         while(len(strokes) > 0):
             pos = random.randint(0, len(strokes)-1)
             b = strokes.pop(pos)
-            if(len(b.points) >= 2):
-                renderStroke(b, canvas)
+            renderStroke(b, canvas)
+
+        # canvas.save('images_output/cutler.png')
+        # exit(0)
     #print(strokes)
 
     # and now render the brushes :)
@@ -235,11 +237,10 @@ def renderStroke(b, canvas):
     for r,p in zip(np.array(b.pointStrokeRadii).astype(int), ps):
         x_r = math.ceil(p[0])
         y_r = math.ceil(p[1])
-        if(x_r-r < 0 or x_r+r > res_w or y_r-r < 0 or y_r + r > res_h):
-            #print('boooo')
-            continue
         #print('yes')
-        canvas.image[y_r-r:y_r+r, x_r-r:x_r+r] = b.getColor()
+        cv.circle(canvas.image, (x_r, y_r), r, b.getColor(), -1)
+
+    return canvas
 
 if(__name__ == "__main__"):
     #Load image
@@ -252,5 +253,5 @@ if(__name__ == "__main__"):
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/79.png')
+    canvas.save('images_output/grad2.png')
 
