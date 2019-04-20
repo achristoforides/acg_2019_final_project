@@ -26,11 +26,11 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
     K.addPoint(x0, y0)
     K.addDir(0, 0)
     K.addPointRadii(brush_i)
+    temp_img = ref_image.getLuminance()
+    xderiv = temp_img.derivative(True)
+    yderiv = temp_img.derivative(False)
 
     for i in range(1, maxStrokeLength+1):
-        temp_img = ref_image.getLuminance()
-        xderiv = temp_img.derivative(True)
-        yderiv = temp_img.derivative(False)
 
         # i'm not sure what the derivative(x_i-1, y_i-1) means...
         lcpx, lcpy = K.getLastControlPoint()
@@ -73,14 +73,10 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
         if i > minStrokeLength and pix_euc < color_euc:
             return K
 
-        hit = False
-        for i in K.points:
-            if(i[0] == xi):
-                hit = True
-        if(not hit):
-            K.addPointRadii(brush_i)
-            K.addPoint(xi, yi)
-            K.addDir(delxi, delyi)
+    
+        K.addPointRadii(math.sqrt(gx**2 + gy**2)*brush_i)
+        K.addPoint(xi, yi)
+        K.addDir(delxi, delyi)
 
     return K
 
@@ -108,6 +104,9 @@ def paintStrokeTwo(x0, y0, R, rImage, canvas):
     lastDx, lastDy = 0, 0
     x, y = x0, y0
     height, width = rImage.getResolution()
+    temp_img = rImage.getLuminance()
+    xderiv = temp_img.derivative(True)
+    yderiv = temp_img.derivative(False)
     for i in range(1, maxStrokeLength+1):
 
         pir = rImage.getPixel(x, y)
@@ -123,9 +122,6 @@ def paintStrokeTwo(x0, y0, R, rImage, canvas):
         if(i > minStrokeLength and pix_euc < color_euc):
             return K
 
-        temp_img = rImage.getLuminance()
-        xderiv = temp_img.derivative(True)
-        yderiv = temp_img.derivative(False)
 
         gx, gy = xderiv.getPixel(x, y), yderiv.getPixel(x, y)
 
@@ -149,14 +145,9 @@ def paintStrokeTwo(x0, y0, R, rImage, canvas):
         if(x < 0 or y < 0 or x >= width or y >= height):
             return K
 
-        hit = False
-        for i in K.points:
-            if(i[0] == x):
-                hit = True
-        if(not hit):
-            K.addPoint(x, y)
-            K.addDir(dx, dy)
-            K.addPointRadii(math.sqrt(gx**2 + gy**2)*R)
+        K.addPoint(x, y)
+        K.addDir(dx, dy)
+        K.addPointRadii(math.sqrt(gx**2 + gy**2)*R)
 
     return K 
 
@@ -200,7 +191,7 @@ def paint(source, canvas, brushes, firstFrame):
                     x_i = max_xs[val] + col-grid
                     y_i = temp_ys[val] + row-grid
                     #print(x_i, y_i)
-                    strokes.append(paintStroke(x_i, y_i, b, i_ri, canvas))
+                    strokes.append(paintStrokeTwo(x_i, y_i, b, source, canvas))
         refresh = False
 
         print('brush done..')
@@ -209,7 +200,8 @@ def paint(source, canvas, brushes, firstFrame):
             b = strokes.pop(pos)
             renderStroke(b, canvas)
 
-        # canvas.save('images_output/cutler.png')
+
+        canvas.save('images_output/test/t2_result_2_{:d}.png'.format(b.getRadius()))
         # exit(0)
     #print(strokes)
 
@@ -233,12 +225,18 @@ def renderStroke(b, canvas):
     res_h, res_w = canvas.getResolution()
 
     #print(xs, ys, interp, minRadius)
+    radii = np.array(b.pointStrokeRadii).astype(int)
 
-    for r,p in zip(np.array(b.pointStrokeRadii).astype(int), ps):
-        x_r = math.ceil(p[0])
-        y_r = math.ceil(p[1])
+    for i in range(len(radii)-1):
+        r = radii[i]
+        x_r = math.ceil(ps[i][0])
+        y_r = math.ceil(ps[i][1])
+
+        x_r_1 = math.ceil(ps[i+1][0])
+        y_r_1 = math.ceil(ps[i+1][1])
         #print('yes')
         cv.circle(canvas.image, (x_r, y_r), r, b.getColor(), -1)
+        cv.line(canvas.image, (x_r, y_r), (x_r_1, y_r_1), b.getColor(), r)
 
     return canvas
 
@@ -253,5 +251,5 @@ if(__name__ == "__main__"):
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/grad2.png')
+    canvas.save('images_output/t2_3_test_imp_error.png')
 
