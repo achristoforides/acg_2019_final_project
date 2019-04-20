@@ -201,7 +201,7 @@ def paint(source, canvas, brushes, firstFrame):
             renderStroke(b, canvas)
 
 
-        canvas.save('images_output/test/t2_result_2_{:d}.png'.format(b.getRadius()))
+        canvas.save('images_output/test/van_gogh_result_2_{:d}.png'.format(b.getRadius()))
         # exit(0)
     #print(strokes)
 
@@ -236,20 +236,20 @@ def renderStroke(b, canvas):
         y_r_1 = math.ceil(ps[i+1][1])
         #print('yes')
         cv.circle(canvas.image, (x_r, y_r), r, b.getColor(), -1)
-        cv.line(canvas.image, (x_r, y_r), (x_r_1, y_r_1), b.getColor(), r)
+        cv.line(canvas.image, (x_r, y_r), (x_r_1, y_r_1), b.getColor(), r*2)
 
     return canvas
 
 if(__name__ == "__main__"):
     #Load image
     img = im.Image()
-    img.load('images/t2.png')
+    img.load('images/van_gogh.jpg')
 
     canvas = im.Image()
-    canvas.load('images/t2.png')
+    canvas.load('images/van_gogh.jpg')
     canvas.image.fill(255)
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/t2_3_test_imp_error.png')
+    canvas.save('images_output/test/van_gogh_3_test.png')
 
