@@ -142,12 +142,12 @@ def paintStrokeTwo(x0, y0, R, rImage, canvas):
 
         lastDx, lastDy = dx, dy
 
-        if(x < 0 or y < 0 or x >= width or y >= height):
-            return K
-
         K.addPoint(x, y)
         K.addDir(dx, dy)
         K.addPointRadii(math.sqrt(gx**2 + gy**2)*R)
+
+        if(x < 0 or y < 0 or x >= width or y >= height):
+            return K
 
     return K 
 
