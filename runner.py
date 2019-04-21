@@ -26,18 +26,15 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
     K.addPoint(x0, y0)
     K.addDir(0, 0)
     K.addPointRadii(brush_i)
+    temp_img = ref_image.getLuminance()
+    xderiv = temp_img.derivative(True)
+    yderiv = temp_img.derivative(False)
 
-    for i in range(1, maxStrokeLength):
-        temp_img = ref_image.getLuminance()
-        xderiv = temp_img.derivative(True)
-        yderiv = temp_img.derivative(False)
+    for i in range(1, maxStrokeLength+1):
 
         # i'm not sure what the derivative(x_i-1, y_i-1) means...
         lcpx, lcpy = K.getLastControlPoint()
         gx, gy = (255 * xderiv.getPixel(lcpx, lcpy), 255 * yderiv.getPixel(lcpx, lcpy))
-
-        if(not gx or not gy):
-            continue
 
         ldx, ldy = K.getLastDirection()
         #print(brush_i, gx, gy)
@@ -55,10 +52,7 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
             if i > 1:
                 delxi, delyi = (ldx, ldy)
             else:
-                return K
-
-        if(delxi**2 == 0 or delyi**2 == 0):
-            continue
+                return K        
 
         xi, yi = (math.ceil(lcpx + brush_i * (delxi) / math.sqrt(delxi*delxi + delyi*delyi)), \
                   math.ceil(lcpy + brush_i * (delyi) / math.sqrt(delxi*delxi + delyi*delyi)))
@@ -79,13 +73,10 @@ def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
         if i > minStrokeLength and pix_euc < color_euc:
             return K
 
-        hit = False
-        for i in K.points:
-            if(i[0] == xi):
-                hit = True
-        if(not hit):
-            K.addPointRadii(brush_i)
-            K.addPoint(xi, yi)
+    
+        K.addPointRadii(math.sqrt(gx**2 + gy**2)*brush_i)
+        K.addPoint(xi, yi)
+        K.addDir(delxi, delyi)
 
     return K
 
@@ -104,6 +95,62 @@ def calculateError(img1, img2, rBounds, cBounds):
     result = np.sqrt(np.power(r1-r2, 2) + np.power(g1-g2, 2) + np.power(b1-b2, 2))
     return result
 
+def paintStrokeTwo(x0, y0, R, rImage, canvas):
+    color = rImage.getPixel(x0, y0)
+    K = bs.BrushStroke(R, color)
+    K.addPoint(x0, y0)
+    K.addDir(0,0)
+    K.addPointRadii(R)
+    lastDx, lastDy = 0, 0
+    x, y = x0, y0
+    height, width = rImage.getResolution()
+    temp_img = rImage.getLuminance()
+    xderiv = temp_img.derivative(True)
+    yderiv = temp_img.derivative(False)
+    for i in range(1, maxStrokeLength+1):
+
+        pir = rImage.getPixel(x, y)
+        pid = canvas.getPixel(x, y)
+
+        pix_euc = math.sqrt( pow(pir[0]-pid[0], 2) + \
+                        pow(pir[1]-pid[1], 2) + \
+                        pow(pir[2]-pid[2], 2) )
+        color_euc = math.sqrt( pow(pir[0]-color[0], 2) + \
+                          pow(pir[1]-color[1], 2) + \
+                          pow(pir[2]-color[2], 2) )
+
+        if(i > minStrokeLength and pix_euc < color_euc):
+            return K
+
+
+        gx, gy = xderiv.getPixel(x, y), yderiv.getPixel(x, y)
+
+        if(gx**2 + gy**2 == 0):
+            return K
+
+        dx, dy = -gy, gx
+
+        if(lastDx * dx + lastDy * dy < 0):
+            dx, dy = -dx, -dy
+
+        dx, dy = f_c * dx + (1-f_c)*lastDx, f_c * dy + (1-f_c)*lastDy 
+        dx, dy = dx / math.sqrt(dx**2 + dy**2), dy / math.sqrt(dx**2 + dy**2)
+
+        x, y = x+R*dx , y+R*dy
+
+        x, y = int(round(x)), int(round(y))
+
+        lastDx, lastDy = dx, dy
+
+        K.addPoint(x, y)
+        K.addDir(dx, dy)
+        K.addPointRadii(math.sqrt(gx**2 + gy**2)*R)
+
+        if(x < 0 or y < 0 or x >= width or y >= height):
+            return K
+
+    return K 
+
 # Paint routine
 #
 # source:     Image, source image
@@ -120,81 +167,89 @@ def paint(source, canvas, brushes, firstFrame):
         grid = b
 
         height, width = source.getResolution()
-        space_calc_x = width // grid
-        space_calc_y = height // grid
 
         ### loop through gridspace
-        for row in range(space_calc_y):
-            start_r = row * grid + grid
-            for col in range(space_calc_x):
-                start_c = col * grid + grid
+        for row in range(grid, height, grid):
+            for col in range(grid, width, grid):
                 #Scan through the pixels in this range...
                 # This represents M...
-                rRange, cRange = (start_r-grid//2, start_r+grid//2), \
-                                 (start_c-grid//2, start_c+grid//2)
+                rRange, cRange = (row-grid, row+grid), \
+                                 (col-grid, col+grid)
                 M = (cRange, rRange)
-                try:
-                    euclid = calculateError(canvas, i_ri, M[1], M[0])
-                except:
-                    continue
-                    #print(euclid)
+                
+                euclid = calculateError(canvas, i_ri, M[1], M[0])
                 areaError = np.sum(euclid)
+                
                 if(refresh or areaError > T):
-                    max_ys = np.argmax(euclid, axis=1)
-                    temp_xs = np.arange(len(max_ys))
-                    val = np.argmax(euclid[temp_xs, max_ys])
-                    x_i = temp_xs[val] + start_c-grid//2
-                    y_i = max_ys[val] + start_r-grid//2
+                    max_xs = np.argmax(euclid, axis=1)
+
+                    temp_ys = np.arange(len(max_xs))
+                    val = np.argmax(euclid[temp_ys, max_xs])
+                    #print(euclid)
+                    #print(max_xs)
+                    #print(temp_ys)
+                    x_i = max_xs[val] + col-grid
+                    y_i = temp_ys[val] + row-grid
                     #print(x_i, y_i)
-                    strokes.append(paintStroke(x_i, y_i, b, i_ri, canvas))
+                    strokes.append(paintStrokeTwo(x_i, y_i, b, source, canvas))
         refresh = False
 
         print('brush done..')
+        while(len(strokes) > 0):
+            pos = random.randint(0, len(strokes)-1)
+            b = strokes.pop(pos)
+            renderStroke(b, canvas)
+
+
+        canvas.save('images_output/test/van_gogh_result_2_{:d}.png'.format(b.getRadius()))
+        # exit(0)
     #print(strokes)
 
     # and now render the brushes :)
 
-    while(len(strokes) > 0):
-        pos = random.randint(0, len(strokes)-1)
-        b = strokes.pop(pos)
-        if(len(b.points) >= 2):
-            renderStroke(b, canvas)
-            
-            #canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
+    #strokes.sort(reverse=True, key=lambda x: x.getRadius())
+
+    #canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
 
 def renderStroke(b, canvas):
 
     print('render')
 
-    xs, cs, minRadius = b.calculateCubic()
-    interp = b.getInterpolatedArray(minRadius)
+    #xs, cs, minRadius = b.calculateCubic()
+    #interp = b.getInterpolatedArray(minRadius)
 
-    ys = cs(xs)
+    #ys = cs(xs)
+
+    ps = b.points
 
     res_h, res_w = canvas.getResolution()
 
     #print(xs, ys, interp, minRadius)
+    radii = np.array(b.pointStrokeRadii).astype(int)
 
-    for x,y in zip(xs.astype(int), ys.astype(int)):
-        x_r = math.ceil(x)
-        r = 1
-        y_r = math.ceil(y)
-        if(x_r-r < 0 or x_r+r > res_w or y_r-r < 0 or y_r + r > res_h):
-            #print('boooo')
-            continue
+    for i in range(len(radii)-1):
+        r = radii[i]
+        x_r = math.ceil(ps[i][0])
+        y_r = math.ceil(ps[i][1])
+
+        x_r_1 = math.ceil(ps[i+1][0])
+        y_r_1 = math.ceil(ps[i+1][1])
         #print('yes')
-        canvas.image[y_r-r:y_r+r, x_r-r:x_r+r] = b.getColor()
+        cv.circle(canvas.image, (x_r, y_r), r, b.getColor(), -1)
+        cv.line(canvas.image, (x_r, y_r), (x_r_1, y_r_1), b.getColor(), r*2)
+
+    return canvas
 
 if(__name__ == "__main__"):
     #Load image
     img = im.Image()
-    img.load('images/ig.png')
+    img.load('images/van_gogh.jpg')
 
     canvas = im.Image()
-    canvas.load('images/ig.png')
-    canvas.image.fill(0)
+    canvas.load('images/van_gogh.jpg')
+    canvas.image.fill(255)
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/f9.png')
+    canvas.save('images_output/test/van_gogh_3_test.png')
 
