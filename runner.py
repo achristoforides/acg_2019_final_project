@@ -170,6 +170,8 @@ def paint(source, canvas, brushes, firstFrame):
 
         ### loop through gridspace
 
+
+
         for row in range(grid, height, grid):
             for col in range(grid, width, grid):
                 #Scan through the pixels in this range...
@@ -217,12 +219,12 @@ def renderStroke(b, canvas):
 
     ps = b.points
 
-    radii = b.getInterpolatedArray()
+    #radii = b.getInterpolatedArray()
 
     res_h, res_w = canvas.getResolution()
 
     #print(xs, ys, interp, minRadius)
-    #radii = np.array(b.pointStrokeRadii).astype(int)
+    radii = np.array(b.pointStrokeRadii).astype(int)
 
     #print(radii)
 
