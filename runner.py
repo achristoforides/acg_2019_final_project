@@ -5,12 +5,14 @@ import image as im
 import numpy as np
 import renderable_image as ri
 import brush_stroke as bs
+import sys
+import os
 
 f_sigma = 0.5
-bss = [ 64, 32, 16, 4, 2]
+bss = [ 8, 4, 2]
 T = 100
-maxStrokeLength = 0
-minStrokeLength = 0
+maxStrokeLength = 16
+minStrokeLength = 4
 f_c = 1
 
 def getRange(img, rBounds, cBounds):
@@ -138,24 +140,13 @@ def paint(source, canvas, brushes, firstFrame):
 
 
         canvas.save('images_output/pink/ig_2_{:d}_point.png'.format(b.getRadius()))
-        # exit(0)
-    #print(strokes)
-
-    # and now render the brushes :)
-
-    #strokes.sort(reverse=True, key=lambda x: x.getRadius())
-
-    #canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
 
 def renderStroke(b, canvas):
 
     ps = b.points
 
-    #radii = b.getInterpolatedArray()
-
     res_h, res_w = canvas.getResolution()
 
-    #print(xs, ys, interp, minRadius)
     radii = np.array(b.pointStrokeRadii).astype(int)
 
     #print(radii)
@@ -173,19 +164,174 @@ def renderStroke(b, canvas):
 
         x_r_1 = math.ceil(ps[i+1][0])
         y_r_1 = math.ceil(ps[i+1][1])
-        #print('yes')
         cv.circle(canvas.image, (x_r, y_r), r, b.getColor(), -1)
         cv.line(canvas.image, (x_r_1, y_r_1), (x_r, y_r), b.getColor(), r*2)
 
     return canvas
 
+def process_video(input_file):
+    srcs = []
+    dests = []
+
+    vidcap = cv.VideoCapture(input_file)
+    success,image = vidcap.read()
+    count = 0
+    while success:
+        src = im.Image()
+        src.image = image
+        dest = im.Image()
+        dest.image = src.image
+
+        #this is me being lazy...
+        b,g,r = cv.split(dest.image)
+        b.fill(255)
+        g.fill(0)
+        r.fill(255)
+
+        dest.image = cv.merge((b,g,r))
+
+        srcs.append(src)
+        dests.append(dest)
+
+        success,image = vidcap.read()
+
+    print(len(srcs))
+    print('video converted.')
+
+    for z in range(len(srcs) - 1):
+        paint(srcs[z], dests[z], bss, False)
+        canvas = dests[z]
+        height, width = canvas.getResolution()
+
+        for i in range(height):
+            for q in range(width):
+                aboveY = i+1
+                rightX = q+1
+                leftX = q-1
+                belowY = i-1
+
+                s = np.array([0,0,0]).astype(np.float64)
+
+                currentPixel = canvas.getPixel(q, i)
+
+                if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
+                    #print(currentPixel)
+                    valid = 0
+                    if(canvas.inBounds(q, aboveY)):
+                        p = canvas.getPixel(q, aboveY)
+                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                            s += p
+                            valid+=1
+
+                    if(canvas.inBounds(q, belowY)):
+                        p = canvas.getPixel(q, belowY)
+                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                            s += p
+                            valid+=1
+
+                    if(canvas.inBounds(rightX, i)):
+                        p = canvas.getPixel(rightX, i)
+                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                            s += p
+                            valid+=1
+
+                    if(canvas.inBounds(leftX, i)):
+                        p = canvas.getPixel(leftX, i)  
+                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                            s += p
+                            valid+=1
+
+                    if(valid != 0):
+                        s /= np.array([valid, valid, valid])
+                        canvas.setPixel(q, i, s)
+        canvas.save(str(z) + '_output.png')
+        dests[z+1].image = canvas.image
+        print('Frame ' + str(z+1) + '/' + str(len(srcs)) + ' completed.')
+        if z == len(srcs) - 2:
+            paint(srcs[z+1], dests[z+1], bss, False)
+            canvas = dests[z+1]
+            for i in range(height):
+                for q in range(width):
+                    aboveY = i+1
+                    rightX = q+1
+                    leftX = q-1
+                    belowY = i-1
+
+                    s = np.array([0,0,0]).astype(np.float64)
+
+                    currentPixel = canvas.getPixel(q, i)
+
+                    if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
+                        #print(currentPixel)
+                        valid = 0
+                        if(canvas.inBounds(q, aboveY)):
+                            p = canvas.getPixel(q, aboveY)
+                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                                s += p
+                                valid+=1
+
+                        if(canvas.inBounds(q, belowY)):
+                            p = canvas.getPixel(q, belowY)
+                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                                s += p
+                                valid+=1
+
+                        if(canvas.inBounds(rightX, i)):
+                            p = canvas.getPixel(rightX, i)
+                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                                s += p
+                                valid+=1
+
+                        if(canvas.inBounds(leftX, i)):
+                            p = canvas.getPixel(leftX, i)  
+                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                                s += p
+                                valid+=1
+
+                        if(valid != 0):
+                            s /= np.array([valid, valid, valid])
+                            canvas.setPixel(q, i, s)
+
+            canvas.save(str(z+1) + '_output.png')
+            print('Frame ' + str(z+2) + '/' + str(len(srcs)) + ' completed.')
+
+
 if(__name__ == "__main__"):
+    file_name = ""
+    is_video = False
+    render_type = ""
+
+    if len(sys.argv) < 3:
+        print('ERROR: not enough arguments')
+        exit(0)
+
+    for i in range(1, len(sys.argv)):
+        if sys.argv[i] == "-image":
+            is_video = False
+            file_name = sys.argv[i+1]
+            i += 1
+        elif sys.argv[i] == "-video":
+            is_video = True
+            file_name = sys.argv[i+1]
+            i += 1
+        elif sys.argv[i] == "-style":
+            render_type = sys.argv[i+1]
+            i += 1
+
+    if file_name == "" or render_type == "":
+        print('ERROR: file name not specified and/or render type not specified')
+        exit(0)
+
+    if is_video:
+        process_video(file_name)
+        exit(0)
+        
     #Load image
     img = im.Image()
-    img.load('images/liz.jpg')
+    img.load(file_name)
 
     canvas = im.Image()
-    canvas.load('images/liz.jpg')
+    canvas.load(file_name)
 
     #this is me being lazy...
     b,g,r = cv.split(canvas.image)
@@ -210,7 +356,6 @@ if(__name__ == "__main__"):
 
             currentPixel = canvas.getPixel(q, i)
 
-
             if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
                 #print(currentPixel)
                 valid = 0
@@ -225,7 +370,6 @@ if(__name__ == "__main__"):
                     if(p[0] != 255 or p[1] != 0 or p[2] != 255):
                         s += p
                         valid+=1
-                    
 
                 if(canvas.inBounds(rightX, i)):
                     p = canvas.getPixel(rightX, i)
@@ -244,5 +388,5 @@ if(__name__ == "__main__"):
                     canvas.setPixel(q, i, s)
 
 
-    canvas.save('images_output/pink/ig_2_result_point.png')
+    canvas.save('out_' + os.path.splittext(file_name)[0] + '.png')
 
