@@ -7,79 +7,11 @@ import renderable_image as ri
 import brush_stroke as bs
 
 f_sigma = 0.5
-bss = [ 8, 4, 2]
+bss = [ 64, 32, 16, 4, 2]
 T = 100
-maxStrokeLength = 16
-minStrokeLength = 4
+maxStrokeLength = 0
+minStrokeLength = 0
 f_c = 1
-
-# PaintStroke routine
-#
-# x0:              int, starting x point
-# y0:              int, starting y point
-# brush_i:         float, brush radius
-# ref_image:       Image, reference image
-# painting_so_far: Image, current render of image
-def paintStroke(x0, y0, brush_i, ref_image, painting_so_far):
-    color = ref_image.getPixel(x0, y0)
-    K = bs.BrushStroke(brush_i, color)
-    K.addPoint(x0, y0)
-    K.addDir(0, 0)
-    K.addPointRadii(brush_i)
-    temp_img = ref_image.getLuminance()
-    xderiv = temp_img.derivative(True)
-    yderiv = temp_img.derivative(False)
-
-    for i in range(1, maxStrokeLength+1):
-
-        # i'm not sure what the derivative(x_i-1, y_i-1) means...
-        lcpx, lcpy = K.getLastControlPoint()
-        gx, gy = (255 * xderiv.getPixel(lcpx, lcpy), 255 * yderiv.getPixel(lcpx, lcpy))
-
-        ldx, ldy = K.getLastDirection()
-        #print(brush_i, gx, gy)
-        if brush_i * math.sqrt(gx*gx + gy*gy) >= 1:
-            # rotate gradient by 90 degrees
-            delxi, delyi = (-gy, gx)
-
-            # reverse direction if necessary
-            if i > 1 and ldx*delxi + ldy*delyi < 0:
-                delxi, delyi = (-delxi, -delyi)
-
-            # filter stroke direction
-            delxi, delyi = (f_c * delxi + (1 - f_c) * ldx, f_c * delyi + (1 - f_c) * ldy)
-        else:
-            if i > 1:
-                delxi, delyi = (ldx, ldy)
-            else:
-                return K        
-
-        xi, yi = (math.ceil(lcpx + brush_i * (delxi) / math.sqrt(delxi*delxi + delyi*delyi)), \
-                  math.ceil(lcpy + brush_i * (delyi) / math.sqrt(delxi*delxi + delyi*delyi)))
-
-        pir = ref_image.getPixel(xi, yi)
-        pid = painting_so_far.getPixel(xi, yi)
-
-        if(len(pir) != 3 or len(pid) != 3):
-            continue
-
-        pix_euc = math.sqrt( pow(pir[0]-pid[0], 2) + \
-                        pow(pir[1]-pid[1], 2) + \
-                        pow(pir[2]-pid[2], 2) )
-        color_euc = math.sqrt( pow(pir[0]-color[0], 2) + \
-                          pow(pir[1]-color[1], 2) + \
-                          pow(pir[2]-color[2], 2) )
-
-        if i > minStrokeLength and pix_euc < color_euc:
-            return K
-
-    
-        K.addPointRadii(math.sqrt(gx**2 + gy**2)*brush_i)
-        K.addPoint(xi, yi)
-        K.addDir(delxi, delyi)
-
-    return K
-
 
 def getRange(img, rBounds, cBounds):
     return img.image[rBounds[0]:rBounds[1], cBounds[0]:cBounds[1]]
@@ -205,7 +137,7 @@ def paint(source, canvas, brushes, firstFrame):
             renderStroke(b, canvas)
 
 
-        canvas.save('images_output/pink/t2_2_{:d}.png'.format(b.getRadius()))
+        canvas.save('images_output/pink/ig_2_{:d}_point.png'.format(b.getRadius()))
         # exit(0)
     #print(strokes)
 
@@ -228,6 +160,12 @@ def renderStroke(b, canvas):
 
     #print(radii)
 
+    if(len(radii) == 1):
+        r = radii[0]
+        x_r = math.ceil(ps[0][0])
+        y_r = math.ceil(ps[0][1])
+        cv.circle(canvas.image, (x_r, y_r), r, b.getColor(), -1)
+
     for i in range(len(radii)-1):
         r = radii[i]
         x_r = math.ceil(ps[i][0])
@@ -244,20 +182,67 @@ def renderStroke(b, canvas):
 if(__name__ == "__main__"):
     #Load image
     img = im.Image()
-    img.load('images/t2.png')
+    img.load('images/liz.jpg')
 
     canvas = im.Image()
-    canvas.load('images/t2.png')
+    canvas.load('images/liz.jpg')
 
     #this is me being lazy...
     b,g,r = cv.split(canvas.image)
-    b.fill(147)
-    g.fill(20)
+    b.fill(255)
+    g.fill(0)
     r.fill(255)
 
     canvas.image = cv.merge((b,g,r))
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/pink/result.png')
+    height, width = canvas.getResolution()
+
+    for i in range(height):
+        for q in range(width):
+            aboveY = i+1
+            rightX = q+1
+            leftX = q-1
+            belowY = i-1
+
+            s = np.array([0,0,0]).astype(np.float64)
+
+            currentPixel = canvas.getPixel(q, i)
+
+
+            if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
+                #print(currentPixel)
+                valid = 0
+                if(canvas.inBounds(q, aboveY)):
+                    p = canvas.getPixel(q, aboveY)
+                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                        s += p
+                        valid+=1
+
+                if(canvas.inBounds(q, belowY)):
+                    p = canvas.getPixel(q, belowY)
+                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                        s += p
+                        valid+=1
+                    
+
+                if(canvas.inBounds(rightX, i)):
+                    p = canvas.getPixel(rightX, i)
+                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                        s += p
+                        valid+=1
+
+                if(canvas.inBounds(leftX, i)):
+                    p = canvas.getPixel(leftX, i)  
+                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                        s += p
+                        valid+=1
+
+                if(valid != 0):
+                    s /= np.array([valid, valid, valid])
+                    canvas.setPixel(q, i, s)
+
+
+    canvas.save('images_output/pink/ig_2_result_point.png')
 
