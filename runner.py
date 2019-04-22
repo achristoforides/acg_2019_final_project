@@ -169,10 +169,12 @@ def paint(source, canvas, brushes, firstFrame):
         height, width = source.getResolution()
 
         ### loop through gridspace
+
         for row in range(grid, height, grid):
             for col in range(grid, width, grid):
                 #Scan through the pixels in this range...
                 # This represents M...
+
                 rRange, cRange = (row-grid, row+grid), \
                                  (col-grid, col+grid)
                 M = (cRange, rRange)
@@ -188,8 +190,8 @@ def paint(source, canvas, brushes, firstFrame):
                     #print(euclid)
                     #print(max_xs)
                     #print(temp_ys)
-                    x_i = max_xs[val] + col-grid
-                    y_i = temp_ys[val] + row-grid
+                    x_i = max_xs[val] + col-grid 
+                    y_i = temp_ys[val] + row-grid 
                     #print(x_i, y_i)
                     strokes.append(paintStrokeTwo(x_i, y_i, b, source, canvas))
         refresh = False
@@ -201,7 +203,7 @@ def paint(source, canvas, brushes, firstFrame):
             renderStroke(b, canvas)
 
 
-        canvas.save('images_output/test/van_gogh_result_2_{:d}.png'.format(b.getRadius()))
+        canvas.save('images_output/test/m/p_2_{:d}.png'.format(b.getRadius()))
         # exit(0)
     #print(strokes)
 
@@ -212,13 +214,6 @@ def paint(source, canvas, brushes, firstFrame):
     #canvas.save('/home/andrew/Desktop/outs/img_'+str(pos*random.randint(0,3))+'.png')
 
 def renderStroke(b, canvas):
-
-    print('render')
-
-    #xs, cs, minRadius = b.calculateCubic()
-    #interp = b.getInterpolatedArray(minRadius)
-
-    #ys = cs(xs)
 
     ps = b.points
 
@@ -236,20 +231,27 @@ def renderStroke(b, canvas):
         y_r_1 = math.ceil(ps[i+1][1])
         #print('yes')
         cv.circle(canvas.image, (x_r, y_r), r, b.getColor(), -1)
-        cv.line(canvas.image, (x_r, y_r), (x_r_1, y_r_1), b.getColor(), r*2)
+        cv.line(canvas.image, (x_r_1, y_r_1), (x_r, y_r), b.getColor(), r*2)
 
     return canvas
 
 if(__name__ == "__main__"):
     #Load image
     img = im.Image()
-    img.load('images/van_gogh.jpg')
+    img.load('images/p.jpg')
 
     canvas = im.Image()
-    canvas.load('images/van_gogh.jpg')
-    canvas.image.fill(255)
+    canvas.load('images/p.jpg')
+
+    #this is me being lazy...
+    b,g,r = cv.split(canvas.image)
+    b.fill(147)
+    g.fill(20)
+    r.fill(255)
+
+    canvas.image = cv.merge((b,g,r))
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/test/van_gogh_3_test.png')
+    canvas.save('images_output/test/m/p.png')
 
