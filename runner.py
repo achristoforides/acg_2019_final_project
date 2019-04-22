@@ -9,10 +9,10 @@ import sys
 import os
 
 f_sigma = 0.5
-bss = [ 64, 32, 16, 4, 2]
+bss = [ 8, 4, 2]
 T = 100
-maxStrokeLength = 0
-minStrokeLength = 0
+maxStrokeLength = 16
+minStrokeLength = 4
 f_c = 1
 
 def getRange(img, rBounds, cBounds):
@@ -195,7 +195,105 @@ def process_video(input_file):
 
         success,image = vidcap.read()
 
+    print(len(srcs))
     print('video converted.')
+
+    for z in range(len(srcs) - 1):
+        paint(srcs[z], dests[z], bss, False)
+        canvas = dests[z]
+        height, width = canvas.getResolution()
+
+        for i in range(height):
+            for q in range(width):
+                aboveY = i+1
+                rightX = q+1
+                leftX = q-1
+                belowY = i-1
+
+                s = np.array([0,0,0]).astype(np.float64)
+
+                currentPixel = canvas.getPixel(q, i)
+
+                if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
+                    #print(currentPixel)
+                    valid = 0
+                    if(canvas.inBounds(q, aboveY)):
+                        p = canvas.getPixel(q, aboveY)
+                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                            s += p
+                            valid+=1
+
+                    if(canvas.inBounds(q, belowY)):
+                        p = canvas.getPixel(q, belowY)
+                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                            s += p
+                            valid+=1
+
+                    if(canvas.inBounds(rightX, i)):
+                        p = canvas.getPixel(rightX, i)
+                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                            s += p
+                            valid+=1
+
+                    if(canvas.inBounds(leftX, i)):
+                        p = canvas.getPixel(leftX, i)  
+                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                            s += p
+                            valid+=1
+
+                    if(valid != 0):
+                        s /= np.array([valid, valid, valid])
+                        canvas.setPixel(q, i, s)
+        canvas.save(str(z) + '_output.png')
+        dests[z+1].image = canvas.image
+        print('Frame ' + str(z+1) + '/' + str(len(srcs)) + ' completed.')
+        if z == len(srcs) - 2:
+            paint(srcs[z+1], dests[z+1], bss, False)
+            canvas = dests[z+1]
+            for i in range(height):
+                for q in range(width):
+                    aboveY = i+1
+                    rightX = q+1
+                    leftX = q-1
+                    belowY = i-1
+
+                    s = np.array([0,0,0]).astype(np.float64)
+
+                    currentPixel = canvas.getPixel(q, i)
+
+                    if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
+                        #print(currentPixel)
+                        valid = 0
+                        if(canvas.inBounds(q, aboveY)):
+                            p = canvas.getPixel(q, aboveY)
+                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                                s += p
+                                valid+=1
+
+                        if(canvas.inBounds(q, belowY)):
+                            p = canvas.getPixel(q, belowY)
+                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                                s += p
+                                valid+=1
+
+                        if(canvas.inBounds(rightX, i)):
+                            p = canvas.getPixel(rightX, i)
+                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                                s += p
+                                valid+=1
+
+                        if(canvas.inBounds(leftX, i)):
+                            p = canvas.getPixel(leftX, i)  
+                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                                s += p
+                                valid+=1
+
+                        if(valid != 0):
+                            s /= np.array([valid, valid, valid])
+                            canvas.setPixel(q, i, s)
+
+            canvas.save(str(z+1) + '_output.png')
+            print('Frame ' + str(z+2) + '/' + str(len(srcs)) + ' completed.')
 
 
 if(__name__ == "__main__"):
