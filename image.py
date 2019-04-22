@@ -41,10 +41,13 @@ class Image:
     # mathematics; x is position on the horizontal axis, and y is position
     # on the vertical axis
     def setPixel(self, x, y, v):
-        resolution_x, resolution_y = self.getResolution()
-        if x < 0 or y < 0 or x >= resolution_x or y >= resolution_y:
-            return
         self.image[y, x] = v
+
+    def inBounds(self, x, y):
+        resolution_y, resolution_x = self.getResolution()
+        if x < 0 or y < 0 or x >= resolution_x or y >= resolution_y:
+            return False
+        return True
 
     # Gets the grayscale image for this image
     def getGrayScale(self):
