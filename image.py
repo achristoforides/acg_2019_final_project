@@ -63,8 +63,8 @@ class Image:
     # Compute and return the derivative of the image
     def derivative(self, isX):
         if(isX):
-            return Image(np.absolute(cv.Sobel(self.image, cv.CV_64F, 1, 0)))
-        return Image(np.absolute(cv.Sobel(self.image, cv.CV_64F, 0, 1)))
+            return Image(cv.Sobel(self.image, cv.CV_64F, 1, 0))
+        return Image(cv.Sobel(self.image, cv.CV_64F, 0, 1))
 
     # Compute and return a gaussian blur for the image
     def gaussian(self, ksize = None, sigma = None):

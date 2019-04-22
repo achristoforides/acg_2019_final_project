@@ -95,11 +95,8 @@ class BrushStroke:
         #print(self.pointStrokeRadii)
         return (self.npr, self.spline, 1)
 
-    def getInterpolatedArray(self, interval):
-        result = []
-        for i in range(len(self.points)-1):
-            diff = int(abs(self.points[i][0]-self.points[i+1][0])/interval)
-            for t in range(diff):
-                #print(t)
-                result.append((1-t/diff)*self.pointStrokeRadii[i] + t/diff*self.pointStrokeRadii[i+1])
+    def getInterpolatedArray(self):
+        result = [0]*len(self.pointStrokeRadii)
+        for i in range(len(self.pointStrokeRadii)):
+            result[i] = math.ceil(self.pointStrokeRadii[i]-(i*self.pointStrokeRadii[i])/len(self.pointStrokeRadii))
         return result

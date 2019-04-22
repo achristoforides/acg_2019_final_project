@@ -144,7 +144,7 @@ def paintStrokeTwo(x0, y0, R, rImage, canvas):
 
         K.addPoint(x, y)
         K.addDir(dx, dy)
-        K.addPointRadii(math.sqrt(gx**2 + gy**2)*R)
+        K.addPointRadii(R)
 
         if(x < 0 or y < 0 or x >= width or y >= height):
             return K
@@ -193,7 +193,7 @@ def paint(source, canvas, brushes, firstFrame):
                     x_i = max_xs[val] + col-grid 
                     y_i = temp_ys[val] + row-grid 
                     #print(x_i, y_i)
-                    strokes.append(paintStrokeTwo(x_i, y_i, b, source, canvas))
+                    strokes.append(paintStrokeTwo(x_i, y_i, b, i_ri, canvas))
         refresh = False
 
         print('brush done..')
@@ -203,7 +203,7 @@ def paint(source, canvas, brushes, firstFrame):
             renderStroke(b, canvas)
 
 
-        canvas.save('images_output/test/m/p_2_{:d}.png'.format(b.getRadius()))
+        canvas.save('images_output/pink/t2_2_{:d}.png'.format(b.getRadius()))
         # exit(0)
     #print(strokes)
 
@@ -217,10 +217,14 @@ def renderStroke(b, canvas):
 
     ps = b.points
 
+    radii = b.getInterpolatedArray()
+
     res_h, res_w = canvas.getResolution()
 
     #print(xs, ys, interp, minRadius)
-    radii = np.array(b.pointStrokeRadii).astype(int)
+    #radii = np.array(b.pointStrokeRadii).astype(int)
+
+    #print(radii)
 
     for i in range(len(radii)-1):
         r = radii[i]
@@ -238,10 +242,10 @@ def renderStroke(b, canvas):
 if(__name__ == "__main__"):
     #Load image
     img = im.Image()
-    img.load('images/p.jpg')
+    img.load('images/t2.png')
 
     canvas = im.Image()
-    canvas.load('images/p.jpg')
+    canvas.load('images/t2.png')
 
     #this is me being lazy...
     b,g,r = cv.split(canvas.image)
@@ -253,5 +257,5 @@ if(__name__ == "__main__"):
 
     paint(img, canvas, bss, False)
 
-    canvas.save('images_output/test/m/p.png')
+    canvas.save('images_output/pink/result.png')
 
