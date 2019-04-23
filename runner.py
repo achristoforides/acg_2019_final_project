@@ -11,6 +11,7 @@ import os
 f_sigma = 0.5
 bss = [ 8, 4, 2]
 T = 100
+TV = 300
 maxStrokeLength = 16
 minStrokeLength = 4
 f_c = 1
@@ -96,6 +97,7 @@ def paint(source, canvas, brushes, firstFrame):
 
     refresh = firstFrame
     brushes.sort(reverse = True)
+    video = True if firstFrame else False
     for b in brushes:
         i_ri = source.gaussian(sigma=f_sigma, ksize=(int(f_sigma*b)-1, int(f_sigma*b)-1))
         grid = b
@@ -116,9 +118,17 @@ def paint(source, canvas, brushes, firstFrame):
                 M = (cRange, rRange)
                 
                 euclid = calculateError(canvas, i_ri, M[1], M[0])
+
+                if(video):
+                    diffError = calculateError(canvas, source, M[1], M[0])
+                    videoError = np.sum(diffError)
+                    magnitude = 1/(math.sqrt( ( M[0][0]-M[1][0] )**2 + ( M[0][1] - M[1][1] )**2 ))
+                    videoCheck = magnitude*videoError > TV
+                else:
+                    videoCheck = True
                 areaError = np.sum(euclid)
                 
-                if(refresh or areaError > T):
+                if(refresh or (videoCheck and areaError > T)):
                     max_xs = np.argmax(euclid, axis=1)
 
                     temp_ys = np.arange(len(max_xs))
@@ -139,7 +149,7 @@ def paint(source, canvas, brushes, firstFrame):
             renderStroke(b, canvas)
 
 
-        canvas.save('images_output/pink/ig_2_{:d}_point.png'.format(b.getRadius()))
+        canvas.save('images_output/pink/w_2_{:d}_impr.png'.format(b.getRadius()))
 
 def renderStroke(b, canvas):
 
@@ -388,5 +398,5 @@ if(__name__ == "__main__"):
                     canvas.setPixel(q, i, s)
 
 
-    canvas.save('out_' + os.path.splittext(file_name)[0] + '.png')
+    canvas.save('out_' + file_name.split('/')[-1].split('.')[0] + '.png')
 
