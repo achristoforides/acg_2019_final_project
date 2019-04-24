@@ -16,6 +16,51 @@ maxStrokeLength = 16
 minStrokeLength = 4
 f_c = 1
 
+def pinkCorrection(img_to_correct):
+    height, width = img_to_correct.getResolution()
+
+    for i in range(height):
+        for q in range(width):
+            aboveY = i+1
+            rightX = q+1
+            leftX = q-1
+            belowY = i-1
+
+            s = np.array([0,0,0]).astype(np.float64)
+            
+            currentPixel = img_to_correct.getPixel(q, i)
+
+            if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
+                #print(currentPixel)
+                valid = 0
+                if(img_to_correct.inBounds(q, aboveY)):
+                    p = img_to_correct.getPixel(q, aboveY)
+                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                        s += p
+                        valid+=1
+                        
+                if(img_to_correct.inBounds(q, belowY)):
+                    p = img_to_correct.getPixel(q, belowY)
+                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                        s += p
+                        valid+=1
+
+                if(img_to_correct.inBounds(rightX, i)):
+                    p = img_to_correct.getPixel(rightX, i)
+                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                        s += p
+                        valid+=1
+
+                if(img_to_correct.inBounds(leftX, i)):
+                    p = img_to_correct.getPixel(leftX, i)  
+                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
+                        s += p
+                        valid+=1
+
+                if(valid != 0):
+                    s /= np.array([valid, valid, valid])
+                    img_to_correct.setPixel(q, i, s)
+
 def getRange(img, rBounds, cBounds):
     return img.image[rBounds[0]:rBounds[1], cBounds[0]:cBounds[1]]
 
@@ -178,11 +223,11 @@ def renderStroke(b, canvas):
 
     return canvas
 
-def process_video(input_file):
+def process_video(in_file_name, out_file_name):
     srcs = []
     dests = []
 
-    vidcap = cv.VideoCapture(input_file)
+    vidcap = cv.VideoCapture(in_file_name)
     success,image = vidcap.read()
     count = 0
     while success:
@@ -204,7 +249,6 @@ def process_video(input_file):
 
         success,image = vidcap.read()
 
-    print(len(srcs))
     print('video converted.')
 
     num_zeros = len(str(abs(len(srcs))))
@@ -212,138 +256,28 @@ def process_video(input_file):
     for z in range(len(srcs) - 1):
         paint(srcs[z], dests[z], bss, False)
         canvas = dests[z]
-        height, width = canvas.getResolution()
-
-        for i in range(height):
-            for q in range(width):
-                aboveY = i+1
-                rightX = q+1
-                leftX = q-1
-                belowY = i-1
-
-                s = np.array([0,0,0]).astype(np.float64)
-
-                currentPixel = canvas.getPixel(q, i)
-
-                if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
-                    #print(currentPixel)
-                    valid = 0
-                    if(canvas.inBounds(q, aboveY)):
-                        p = canvas.getPixel(q, aboveY)
-                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                            s += p
-                            valid+=1
-
-                    if(canvas.inBounds(q, belowY)):
-                        p = canvas.getPixel(q, belowY)
-                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                            s += p
-                            valid+=1
-
-                    if(canvas.inBounds(rightX, i)):
-                        p = canvas.getPixel(rightX, i)
-                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                            s += p
-                            valid+=1
-
-                    if(canvas.inBounds(leftX, i)):
-                        p = canvas.getPixel(leftX, i)  
-                        if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                            s += p
-                            valid+=1
-
-                    if(valid != 0):
-                        s /= np.array([valid, valid, valid])
-                        canvas.setPixel(q, i, s)
+        
+        pinkCorrection(canvas)
                         
-        canvas.save(str(z).zfill(num_zeros) + '_output.png')
+        canvas.save(str(z).zfill(num_zeros) + out_file_name)
         dests[z+1].image = canvas.image
         print('Frame ' + str(z+1) + '/' + str(len(srcs)) + ' completed.')
         if z == len(srcs) - 2:
             paint(srcs[z+1], dests[z+1], bss, False)
             canvas = dests[z+1]
-            for i in range(height):
-                for q in range(width):
-                    aboveY = i+1
-                    rightX = q+1
-                    leftX = q-1
-                    belowY = i-1
 
-                    s = np.array([0,0,0]).astype(np.float64)
+            pinkCorrection(canvas)
 
-                    currentPixel = canvas.getPixel(q, i)
-
-                    if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
-                        #print(currentPixel)
-                        valid = 0
-                        if(canvas.inBounds(q, aboveY)):
-                            p = canvas.getPixel(q, aboveY)
-                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                                s += p
-                                valid+=1
-
-                        if(canvas.inBounds(q, belowY)):
-                            p = canvas.getPixel(q, belowY)
-                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                                s += p
-                                valid+=1
-
-                        if(canvas.inBounds(rightX, i)):
-                            p = canvas.getPixel(rightX, i)
-                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                                s += p
-                                valid+=1
-
-                        if(canvas.inBounds(leftX, i)):
-                            p = canvas.getPixel(leftX, i)  
-                            if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                                s += p
-                                valid+=1
-
-                        if(valid != 0):
-                            s /= np.array([valid, valid, valid])
-                            canvas.setPixel(q, i, s)
-
-            canvas.save(str(z+1).zfill(num_zeros) + '_output.png')
+            canvas.save(str(z+1).zfill(num_zeros) + out_file_name)
             print('Frame ' + str(z+2) + '/' + str(len(srcs)) + ' completed.')
 
-
-if(__name__ == "__main__"):
-    file_name = ""
-    is_video = False
-    render_type = ""
-
-    if len(sys.argv) < 3:
-        print('ERROR: not enough arguments')
-        exit(0)
-
-    for i in range(1, len(sys.argv)):
-        if sys.argv[i] == "-image":
-            is_video = False
-            file_name = sys.argv[i+1]
-            i += 1
-        elif sys.argv[i] == "-video":
-            is_video = True
-            file_name = sys.argv[i+1]
-            i += 1
-        elif sys.argv[i] == "-style":
-            render_type = sys.argv[i+1]
-            i += 1
-
-    if file_name == "" or render_type == "":
-        print('ERROR: file name not specified and/or render type not specified')
-        exit(0)
-
-    if is_video:
-        process_video(file_name)
-        exit(0)
-        
+def processImage(in_file_name, out_file_name):
     #Load image
     img = im.Image()
-    img.load(file_name)
+    img.load(in_file_name)
 
     canvas = im.Image()
-    canvas.load(file_name)
+    canvas.load(in_file_name)
 
     #this is me being lazy...
     b,g,r = cv.split(canvas.image)
@@ -352,53 +286,77 @@ if(__name__ == "__main__"):
     r.fill(255)
 
     canvas.image = cv.merge((b,g,r))
-
     paint(img, canvas, bss, False)
 
-    height, width = canvas.getResolution()
+    pinkCorrection(canvas)
 
-    for i in range(height):
-        for q in range(width):
-            aboveY = i+1
-            rightX = q+1
-            leftX = q-1
-            belowY = i-1
+    canvas.save(out_file_name)
 
-            s = np.array([0,0,0]).astype(np.float64)
+def parseInput():
+    input_name = ""
+    output_name = ""
+    is_video = False
+    render_type = ""
+    
+    if len(sys.argv) < 3:
+        print('ERROR: Incorrect Usage...')
+        print('Example: python runner.py -[image/video] file_name -style rendering_style', \
+              '[-output output_name]')
+        exit(0)
 
-            currentPixel = canvas.getPixel(q, i)
+    for i in range(1, len(sys.argv), 2):
+        if sys.argv[i] == "-image":
+            is_video = False
+            if i+1 >= len(sys.argv):
+                print('ERROR: Didn\'t specify input image name.')
+                exit(1)
+            if sys.argv[i+1][0] == '-':
+                print('ERROR: Didn\'t specify input image name. Did you put a \'-\' at the beginning of the name?')
+                exit(1)
+            input_name = sys.argv[i+1]
+        elif sys.argv[i] == "-video":
+            is_video = True
+            if i+1 >= len(sys.argv):
+                print('ERROR: Didn\'t specify input video name.')
+                exit(1)
+            if sys.argv[i+1][0] == '-':
+                print('ERROR: Didn\'t specify input video name. Did you put a \'-\' at the beginning of the name?')
+                exit(1)
+            input_name = sys.argv[i+1]
+        elif sys.argv[i] == "-style":
+            if i+1 >= len(sys.argv):
+                print('ERROR: Didn\'t specify rendering style.')
+                exit(1)
+            if sys.argv[i+1][0] == '-':
+                print('ERROR: Didn\'t specify rendering style. Did you put a \'-\' at the beginning of the name?')
+                exit(1)
+            render_type = sys.argv[i+1]
+        elif sys.argv[i] == '-output':
+            if i+1 >= len(sys.argv):
+                print('ERROR: Didn\'t specify output name.')
+                exit(1)
+            if sys.argv[i+1][0] == '-':
+                print('ERROR: Didn\'t specify output name. Did you put a \'-\' at the beginning of the name?')
+                exit(1)
+            output_name = sys.argv[i+1]
+        else:
+            print('ERROR: Unknown option', sys.argv[i], 'specified.')
+            exit(1)
 
-            if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
-                #print(currentPixel)
-                valid = 0
-                if(canvas.inBounds(q, aboveY)):
-                    p = canvas.getPixel(q, aboveY)
-                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                        s += p
-                        valid+=1
+    if input_name == "" or render_type == "":
+        print('ERROR: file name not specified and/or render type not specified')
+        exit(1)
 
-                if(canvas.inBounds(q, belowY)):
-                    p = canvas.getPixel(q, belowY)
-                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                        s += p
-                        valid+=1
+    if output_name == "":
+        output_name = "output.png"
 
-                if(canvas.inBounds(rightX, i)):
-                    p = canvas.getPixel(rightX, i)
-                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                        s += p
-                        valid+=1
-
-                if(canvas.inBounds(leftX, i)):
-                    p = canvas.getPixel(leftX, i)  
-                    if(p[0] != 255 or p[1] != 0 or p[2] != 255):
-                        s += p
-                        valid+=1
-
-                if(valid != 0):
-                    s /= np.array([valid, valid, valid])
-                    canvas.setPixel(q, i, s)
-
-
-    canvas.save('out_' + file_name.split('/')[-1].split('.')[0] + '.png')
+    return (input_name, is_video, render_type, output_name)
+    
+if(__name__ == "__main__"):
+    input_name, is_video, render_type, output_name = parseInput()
+        
+    if is_video:
+        process_video(input_name, output_name)
+    else:
+        processImage(input_name, output_name)
 
