@@ -9,6 +9,15 @@ class Image:
     def __init__(self, image = np.array([[],[]], np.int64)):
         self.image = image
 
+    def setImage(self, new_image):
+        self.image = new_image.image
+        
+    def fillCanvas(self, color=(255,0,255)):
+        b,g,r = cv.split(self.image)
+        b.fill(color[2])
+        g.fill(color[1])
+        r.fill(color[0])
+
     # Saves the image at the specified path, if path is an empty string or
     # None, don't save the image to disk
     def save(self, path):

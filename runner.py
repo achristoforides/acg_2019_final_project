@@ -11,7 +11,7 @@ import os
 f_sigma = 0.5
 bss = [ 8, 4, 2]
 T = 100
-TV = 100
+TV = 300
 maxStrokeLength = 16
 minStrokeLength = 4
 f_c = 1
@@ -31,7 +31,6 @@ def pinkCorrection(img_to_correct):
             currentPixel = img_to_correct.getPixel(q, i)
 
             if(currentPixel[0] == 255 and currentPixel[1] == 0 and currentPixel[2] == 255):
-                #print(currentPixel)
                 valid = 0
                 if(img_to_correct.inBounds(q, aboveY)):
                     p = img_to_correct.getPixel(q, aboveY)
@@ -75,7 +74,7 @@ def calculateError(img1, img2, rBounds, cBounds):
     result = np.sqrt(np.power(r1-r2, 2) + np.power(g1-g2, 2) + np.power(b1-b2, 2))
     return result
 
-def paintStrokeTwo(x0, y0, R, rImage, canvas):
+def paintStroke(x0, y0, R, rImage, canvas):
     color = rImage.getPixel(x0, y0)
     K = bs.BrushStroke(R, color)
     K.addPoint(x0, y0)
@@ -88,7 +87,6 @@ def paintStrokeTwo(x0, y0, R, rImage, canvas):
     xderiv = temp_img.derivative(True)
     yderiv = temp_img.derivative(False)
     for i in range(1, maxStrokeLength+1):
-
         pir = rImage.getPixel(x, y)
         pid = canvas.getPixel(x, y)
 
@@ -180,13 +178,9 @@ def paint(source, canvas, brushes, firstFrame):
 
                     temp_ys = np.arange(len(max_xs))
                     val = np.argmax(euclid[temp_ys, max_xs])
-                    #print(euclid)
-                    #print(max_xs)
-                    #print(temp_ys)
                     x_i = max_xs[val] + col-grid 
                     y_i = temp_ys[val] + row-grid 
-                    #print(x_i, y_i)
-                    strokes.append(paintStrokeTwo(x_i, y_i, b, i_ri, canvas))
+                    strokes.append(paintStroke(x_i, y_i, b, i_ri, canvas))
         refresh = False
 
         print('brush done..')
@@ -202,8 +196,6 @@ def renderStroke(b, canvas):
     res_h, res_w = canvas.getResolution()
 
     radii = np.array(b.pointStrokeRadii).astype(int)
-
-    #print(radii)
 
     if(len(radii) == 1):
         r = radii[0]
@@ -233,16 +225,8 @@ def process_video(in_file_name, out_file_name):
     while success:
         src = im.Image()
         src.image = image
-        dest = im.Image()
-        dest.image = src.image
-
-        #this is me being lazy...
-        b,g,r = cv.split(dest.image)
-        b.fill(255)
-        g.fill(0)
-        r.fill(255)
-
-        dest.image = cv.merge((b,g,r))
+        height, width = src.getResolution()
+        dest = im.blankCanvas(width, height)
 
         srcs.append(src)
         dests.append(dest)
@@ -272,21 +256,13 @@ def process_video(in_file_name, out_file_name):
             print('Frame ' + str(z+2) + '/' + str(len(srcs)) + ' completed.')
 
 def processImage(in_file_name, out_file_name):
-    #Load image
-    img = im.Image()
-    img.load(in_file_name)
-
+    source = im.Image()
+    source.load(in_file_name)
     canvas = im.Image()
     canvas.load(in_file_name)
+    canvas.fillCanvas()
 
-    #this is me being lazy...
-    b,g,r = cv.split(canvas.image)
-    b.fill(255)
-    g.fill(0)
-    r.fill(255)
-
-    canvas.image = cv.merge((b,g,r))
-    paint(img, canvas, bss, False)
+    paint(source, canvas, bss, False)
 
     pinkCorrection(canvas)
 
