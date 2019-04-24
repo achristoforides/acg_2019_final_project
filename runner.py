@@ -1,54 +1,15 @@
-import cv2 as cv
-import math
-import random
 import image as im
-import numpy as np
 import renderable_image as ri
-import brush_stroke as bs
+import video as vid
 import sys
-import os
 
-def process_video(in_file_name, out_file_name):
-    srcs = []
-    dests = []
+# if processing a video, use this function
+def process_video(in_file_name, out_file_name, render_type, TV):
+    video_to_render = vid.Video(in_file_name)
+    video_to_render.render(out_file_name, render_type, TV)
 
-    vidcap = cv.VideoCapture(in_file_name)
-    success,image = vidcap.read()
-    count = 0
-    while success:
-        src = im.Image()
-        src.image = image
-        height, width = src.getResolution()
-        dest = im.blankCanvas(width, height)
-
-        srcs.append(src)
-        dests.append(dest)
-
-        success,image = vidcap.read()
-
-    print('video converted.')
-
-    num_zeros = len(str(abs(len(srcs))))
-
-    for z in range(len(srcs) - 1):
-        paint(srcs[z], dests[z], bss, False)
-        canvas = dests[z]
-        
-        pinkCorrection(canvas)
-                        
-        canvas.save(str(z).zfill(num_zeros) + out_file_name)
-        dests[z+1].image = canvas.image
-        print('Frame ' + str(z+1) + '/' + str(len(srcs)) + ' completed.')
-        if z == len(srcs) - 2:
-            paint(srcs[z+1], dests[z+1], bss, False)
-            canvas = dests[z+1]
-
-            pinkCorrection(canvas)
-
-            canvas.save(str(z+1).zfill(num_zeros) + out_file_name)
-            print('Frame ' + str(z+2) + '/' + str(len(srcs)) + ' completed.')
-
-def processImage(in_file_name, out_file_name):
+# if processing an image, use this function
+def processImage(in_file_name, out_file_name, render_type):
     source = im.Image()
     source.load(in_file_name)
     canvas = im.Image()
@@ -56,14 +17,16 @@ def processImage(in_file_name, out_file_name):
     canvas.fillCanvas()
 
     render_image = ri.RenderableImage(source, canvas)
-    render_image.render()
+    render_image.render(render_type)
     render_image.getDestination().save(out_file_name)
 
+# parses the commandline arguments and returns them to main
 def parseInput():
     input_name = ""
     output_name = ""
     is_video = False
     render_type = ""
+    TV = 0.0
     
     if len(sys.argv) < 3:
         print('ERROR: Incorrect Usage...')
@@ -106,6 +69,14 @@ def parseInput():
                 print('ERROR: Didn\'t specify output name. Did you put a \'-\' at the beginning of the name?')
                 exit(1)
             output_name = sys.argv[i+1]
+        elif sys.argv[i] == '-tv':
+            if i+1 >= len(sys.argv):
+                print('ERROR: Didn\'t specify tv value.')
+                exit(1)
+            if sys.argv[i+1][0] == '-':
+                print('ERROR: Didn\'t specify tv valuee. Did you put a \'-\' at the beginning of the name?')
+                exit(1)
+            TV = float(sys.argv[i+1])
         else:
             print('ERROR: Unknown option', sys.argv[i], 'specified.')
             exit(1)
@@ -117,13 +88,13 @@ def parseInput():
     if output_name == "":
         output_name = "output.png"
 
-    return (input_name, is_video, render_type, output_name)
+    return (input_name, is_video, render_type, output_name, TV)
     
 if(__name__ == "__main__"):
-    input_name, is_video, render_type, output_name = parseInput()
+    input_name, is_video, render_type, output_name, TV = parseInput()
         
     if is_video:
-        process_video(input_name, output_name)
+        process_video(input_name, output_name, render_type, TV)
     else:
-        processImage(input_name, output_name)
+        processImage(input_name, output_name, render_type)
 

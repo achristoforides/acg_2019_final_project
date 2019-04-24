@@ -2,10 +2,6 @@ import math
 import numpy as np
 
 # A wrapper class to hold all data which comprises a brush stroke
-#
-# radius: the radius of the brush
-# color:  the color of the stroke
-# points: the points added to the stroke, stores tuples (x, y)
 class BrushStroke:
     # radius : positive, floating point number
     def __init__(self, radius = 0, color = (0, 0, 0)):

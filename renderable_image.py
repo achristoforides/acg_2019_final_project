@@ -5,13 +5,12 @@ import numpy as np
 from image import Image
 import brush_stroke as bs
 
-f_sigma = 0.5
-bss = [ 8, 4, 2]
-T = 100
-TV = 300
-maxStrokeLength = 16
-minStrokeLength = 4
-f_c = 1
+# Format:       T,    Brushes,   f_c,  f_sigma, minSL, maxSL
+impressionist = [100, [8, 4, 2], 1,    0.5,     4,     16]
+expressionist = [50,  [8, 4, 2], 0.25, 0.5,     10,    16]
+coloristwash  = [200, [8, 4, 2], 1,    0.5,     4,     16]
+pointillist   = [100, [4, 2],    1,    0.5,     0,      0]
+psychedelic   = [50,  [8, 4, 2], 0.5,  0.5,     10,    16]
 
 # A wrapper class which is capable of producing an npr image
 class RenderableImage:
@@ -25,11 +24,29 @@ class RenderableImage:
     # Renders an npr image based on the current source and dest images
     # and stores it in dest
     #
-    # b     : list of Brushes
-    # begin : boolean
-    def render(self, is_video = False):
-        self.paint(bss, is_video)
+    # style    : string, which style to use
+    # TV       : TV value
+    # is_video : boolean, true if rendering a video, false otherwise
+    def render(self, style, TV = 0.0, is_video = False):
+        style_params = []
+        if style == "impressionist":
+            style_params = impressionist
+        elif style == "expressionist":
+            style_params = expressionist
+        elif style == "coloristwash":
+            style_params = coloristwash
+        elif style == "pointillist":
+            style_params = pointillist
+        elif style == "psychedelic":
+            style_params = psychedelic
+        else:
+            print('ERROR: unknown rendering style.')
+            print('Options: impressionist, expressionist, coloristwash, pointillist, psychedelic')
+            exit(1)
+            
+        self.paint(style_params, TV, is_video)
         self.pinkCorrection()
+
 
     # Sets the source image for this RenderableImage
     #
@@ -51,6 +68,7 @@ class RenderableImage:
     def setDestination(self, img):
         self.dest = img
 
+    # Performs the pink correction on the rendered image
     def pinkCorrection(self):
         height, width = self.dest.getResolution()
 
@@ -95,11 +113,13 @@ class RenderableImage:
                         s /= np.array([valid, valid, valid])
                         self.dest.setPixel(q, i, s)
 
+    # Helper function for computing and returning a range
     def getRange(self, img, rBounds, cBounds):
         return img.image[rBounds[0]:rBounds[1], cBounds[0]:cBounds[1]]
 
-    def calculateError(self, ir, rBounds, cBounds):
-        img1 = self.dest
+    # Helper function for computing error in the rendered image
+    def calculateError(self, c, ir, rBounds, cBounds):
+        img1 = c
         img2 = ir
         #Get kernel
         img1_block = self.getRange(img1, rBounds, cBounds)
@@ -111,7 +131,10 @@ class RenderableImage:
         result = np.sqrt(np.power(r1-r2, 2) + np.power(g1-g2, 2) + np.power(b1-b2, 2))
         return result
 
-    def paintStroke(self, x0, y0, R, rImage):
+    # paintStroke routine, generates strokes which are rendered in render stroke
+    def paintStroke(self, x0, y0, R, rImage, style_params):
+        T, brushes, f_c, f_sigma, minStrokeLength, maxStrokeLength = style_params
+        
         color = rImage.getPixel(x0, y0)
         K = bs.BrushStroke(R, color)
         K.addPoint(x0, y0)
@@ -166,14 +189,14 @@ class RenderableImage:
 
         return K
 
-    # Paint routine
-    #
-    # source:     Image, source image
-    # canvas:     Image, resulting image
-    # brushes:    list of brush radii
-    # firstFrame: for video stuff
-    def paint(self, brushes, firstFrame):
+    # Paint routine, paints the image and calls paintstroke to generate strokes and
+    # then calls render stroke to render them
+    def paint(self, style_params, TV, firstFrame):
+        T, brushes, f_c, f_sigma, minStrokeLength, maxStrokeLength = style_params
+        
         strokes = []
+        brushes = style_params[1]
+        f_sigma = style_params[3]
 
         refresh = firstFrame
         brushes.sort(reverse = True)
@@ -194,10 +217,10 @@ class RenderableImage:
                                      (col-grid, col+grid)
                     M = (cRange, rRange)
                 
-                    euclid = self.calculateError(i_ri, M[1], M[0])
+                    euclid = self.calculateError(self.dest, i_ri, M[1], M[0])
 
                     if(video):
-                        diffError = self.calculateError(M[1], M[0])
+                        diffError = self.calculateError(self.dest, self.source, M[1], M[0])
                         videoError = np.sum(diffError)
                         thing = math.sqrt( ( M[0][0]-M[1][0] )**2 + ( M[0][1] - M[1][1] )**2 )
                         if thing == 0.0:
@@ -217,7 +240,7 @@ class RenderableImage:
                         val = np.argmax(euclid[temp_ys, max_xs])
                         x_i = max_xs[val] + col-grid 
                         y_i = temp_ys[val] + row-grid 
-                        strokes.append(self.paintStroke(x_i, y_i, b, i_ri))
+                        strokes.append(self.paintStroke(x_i, y_i, b, i_ri, style_params))
                 refresh = False
 
             print('brush done..')
@@ -226,6 +249,7 @@ class RenderableImage:
                 stroke = strokes.pop(pos)
                 self.renderStroke(stroke)
 
+    # Renders a given brush stroke
     def renderStroke(self, b):
         ps = b.points
 
