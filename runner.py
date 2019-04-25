@@ -11,7 +11,7 @@ import os
 f_sigma = 0.5
 bss = [ 8, 4, 2]
 T = 100
-TV = 3
+TV = 100
 maxStrokeLength = 16
 minStrokeLength = 4
 f_c = 1
@@ -105,9 +105,6 @@ def paint(source, canvas, brushes, firstFrame):
         height, width = source.getResolution()
 
         ### loop through gridspace
-
-
-
         for row in range(grid, height, grid):
             for col in range(grid, width, grid):
                 #Scan through the pixels in this range...
@@ -150,9 +147,6 @@ def paint(source, canvas, brushes, firstFrame):
             pos = random.randint(0, len(strokes)-1)
             b = strokes.pop(pos)
             renderStroke(b, canvas)
-
-
-        canvas.save('images_output/pink/w_2_{:d}_impr.png'.format(b.getRadius()))
 
 def renderStroke(b, canvas):
 
@@ -211,6 +205,8 @@ def process_video(input_file):
     print(len(srcs))
     print('video converted.')
 
+    num_zeros = len(str(abs(len(srcs))))
+
     for z in range(len(srcs) - 1):
         paint(srcs[z], dests[z], bss, True)
         canvas = dests[z]
@@ -257,7 +253,8 @@ def process_video(input_file):
                     if(valid != 0):
                         s /= np.array([valid, valid, valid])
                         canvas.setPixel(q, i, s)
-        canvas.save(str(z) + '_output.png')
+                        
+        canvas.save(str(z).zfill(num_zeros) + '_output.png')
         dests[z+1].image = canvas.image
         print('Frame ' + str(z+1) + '/' + str(len(srcs)) + ' completed.')
         if z == len(srcs) - 2:
@@ -305,7 +302,7 @@ def process_video(input_file):
                             s /= np.array([valid, valid, valid])
                             canvas.setPixel(q, i, s)
 
-            canvas.save(str(z+1) + '_output.png')
+            canvas.save(str(z+1).zfill(num_zeros) + '_output.png')
             print('Frame ' + str(z+2) + '/' + str(len(srcs)) + ' completed.')
 
 
