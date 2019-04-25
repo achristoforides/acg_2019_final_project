@@ -11,7 +11,7 @@ import os
 f_sigma = 0.5
 bss = [ 8, 4, 2]
 T = 100
-TV = 300
+TV = 3
 maxStrokeLength = 16
 minStrokeLength = 4
 f_c = 1
@@ -122,7 +122,10 @@ def paint(source, canvas, brushes, firstFrame):
                 if(video):
                     diffError = calculateError(canvas, source, M[1], M[0])
                     videoError = np.sum(diffError)
-                    magnitude = 1/(math.sqrt( ( M[0][0]-M[1][0] )**2 + ( M[0][1] - M[1][1] )**2 ))
+                    magnitude = (math.sqrt( ( M[0][0]-M[1][0] )**2 + ( M[0][1] - M[1][1] )**2 ))
+                    if(magnitude == 0):
+                        magnitude = 1
+                    magnitude = 1/magnitude
                     videoCheck = magnitude*videoError > TV
                 else:
                     videoCheck = True
@@ -209,7 +212,7 @@ def process_video(input_file):
     print('video converted.')
 
     for z in range(len(srcs) - 1):
-        paint(srcs[z], dests[z], bss, False)
+        paint(srcs[z], dests[z], bss, True)
         canvas = dests[z]
         height, width = canvas.getResolution()
 
