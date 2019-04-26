@@ -3,11 +3,22 @@ import numpy as np
 
  # An image wrapper class for OpenCV and numpy arrays
 class Image:
-
-    # image : np.ndarray()
-    # np.ndarray([[],[]])):
+    # constructor
     def __init__(self, image = np.array([[],[]], np.int64)):
         self.image = image
+
+    # sets the image to the specified image
+    def setImage(self, new_image):
+        self.image = new_image.image
+
+    # fills the canvas with a default color of hot pink
+    def fillCanvas(self, color=(255,0,255)):
+        b,g,r = cv.split(self.image)
+        b.fill(color[2])
+        g.fill(color[1])
+        r.fill(color[0])
+
+        self.image = cv.merge((b,g,r))
 
     # Saves the image at the specified path, if path is an empty string or
     # None, don't save the image to disk
