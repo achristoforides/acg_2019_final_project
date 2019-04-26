@@ -8,6 +8,7 @@ def process_video(in_file_name, out_file_name, render_type, TV):
     video_to_render = vid.Video(in_file_name)
     video_to_render.render(out_file_name, render_type, TV)
 
+
 # if processing an image, use this function
 def processImage(in_file_name, out_file_name, render_type):
     source = im.Image()
@@ -15,7 +16,7 @@ def processImage(in_file_name, out_file_name, render_type):
     canvas = im.Image()
     canvas.load(in_file_name)
     canvas.fillCanvas()
-
+    
     render_image = ri.RenderableImage(source, canvas)
     render_image.render(render_type)
     render_image.getDestination().save(out_file_name)
